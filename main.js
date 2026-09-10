@@ -295,8 +295,14 @@ function generatePolaroids(startX, startY) {
             mediaEl.autoplay = true;
             mediaEl.loop = true;
             mediaEl.muted = true;
+            mediaEl.defaultMuted = true;
             mediaEl.playsInline = true;
+            mediaEl.setAttribute('playsinline', '');
+            mediaEl.setAttribute('webkit-playsinline', '');
+            mediaEl.setAttribute('muted', '');
             mediaEl.className = 'polaroid-media';
+            // Gọi play tường minh để ép autoplay trên một số trình duyệt khó tính (iOS)
+            mediaEl.play().catch(e => console.log('Auto-play prevented', e));
         } else {
             mediaEl = document.createElement('img');
             mediaEl.src = src === 'placeholder' ? `https://picsum.photos/300/300?random=${Math.random()}` : src;
@@ -373,7 +379,14 @@ function animateZeroGravity() {
 function setupPolaroidInteraction(obj) {
     const videoEl = obj.el.querySelector('video');
 
-    obj.el.addEventListener('mouseenter', () => {
+    const handleHover = () => {
+        // Tối ưu Touch: Khi click/hover vào một ảnh, tự động unhover các ảnh khác
+        activePolaroids.forEach(otherObj => {
+            if (otherObj !== obj && otherObj.isHovered && otherObj.unhover) {
+                otherObj.unhover();
+            }
+        });
+
         obj.isHovered = true;
         obj.el.style.zIndex = "100";
         // Vì ảnh đã thu nhỏ lại để hiển thị nhiều, khi hover sẽ phóng to nhiều hơn
@@ -386,10 +399,12 @@ function setupPolaroidInteraction(obj) {
         if (videoEl) {
             videoEl.muted = false;
             bgMusic.pause();
+            // Đảm bảo video play nếu nó bị dừng trên mobile
+            videoEl.play().catch(e => console.log('Video play prevented', e));
         }
-    });
+    };
 
-    obj.el.addEventListener('mouseleave', () => {
+    const handleUnhover = () => {
         obj.isHovered = false;
         obj.el.style.zIndex = "10";
         obj.el.style.boxShadow = ""; // Phục hồi shadow ban đầu
@@ -398,8 +413,28 @@ function setupPolaroidInteraction(obj) {
             videoEl.muted = true;
             bgMusic.play().catch(e => console.log("Audio play prevented", e));
         }
-    });
+    };
+
+    obj.unhover = handleUnhover;
+
+    // Support cả chuột và cảm ứng
+    obj.el.addEventListener('mouseenter', handleHover);
+    obj.el.addEventListener('mouseleave', handleUnhover);
 }
+
+// Global listener để tắt hover khi click/tap ra ngoài màn hình trên mobile/tablet
+['touchstart', 'click'].forEach(evt => {
+    document.addEventListener(evt, (e) => {
+        // Nếu click không trúng bất kỳ tấm polaroid nào
+        if (!e.target.closest('.polaroid')) {
+            activePolaroids.forEach(obj => {
+                if (obj.isHovered && obj.unhover) {
+                    obj.unhover();
+                }
+            });
+        }
+    }, {passive: true});
+});
 
 // ==========================================
 // LOOP: Bắn pháo hoa tiếp
