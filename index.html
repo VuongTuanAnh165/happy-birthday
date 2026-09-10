@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Birthday! 🎂✨</title>
+    
+    <!-- Premium Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Audio Element -->
+    <audio id="bg-music" loop>
+        <source src="assets/audio/song.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- Màn 1: Lời mời bí ẩn -->
+    <div id="scene-1" class="scene active">
+        <!-- Parallax Stars -->
+        <div class="stars stars-1"></div>
+        <div class="stars stars-2"></div>
+        <div class="stars stars-3"></div>
+        
+        <div class="gift-container">
+            <div class="gift-box" id="btn-open-gift">
+                <div class="gift-lid">
+                    <div class="bow"></div>
+                </div>
+                <div class="gift-body"></div>
+                <div class="glow-effect"></div>
+            </div>
+            <button class="glass-btn pulse-btn" id="btn-invite">Chạm vào đây để mở quà nhé...</button>
+        </div>
+    </div>
+
+    <!-- Màn 2, 3, 4: Khoảnh khắc thắp sáng, Lời chúc, Pháo hoa -->
+    <div id="scene-2" class="scene">
+        <!-- Mesh Gradient Background -->
+        <div class="mesh-bg">
+            <div class="blob blob-1"></div>
+            <div class="blob blob-2"></div>
+            <div class="blob blob-3"></div>
+        </div>
+
+        <canvas id="fireworks-canvas"></canvas>
+        <div id="polaroid-container"></div>
+        
+        <div class="content-wrapper">
+            <!-- Lời chúc (Glassmorphism) -->
+            <div class="wish-glass-panel">
+                <p id="wish-text"></p><span id="cursor" class="hidden">|</span>
+                
+                <div class="action-buttons">
+                    <button id="btn-blow-candle" class="glass-btn hidden">Thổi nến 🌬️</button>
+                    <button id="btn-more-magic" class="glass-btn hidden">Thêm chút phép màu nhé ✨</button>
+                </div>
+            </div>
+            
+            <!-- Bánh kem 3D -->
+            <div class="cake-container hidden" id="cake-container">
+                <div class="cake-shadow"></div>
+                <div class="cake">
+                    <div class="tier tier-1">
+                        <div class="icing icing-1"></div>
+                        <div class="icing icing-2"></div>
+                        <div class="icing icing-3"></div>
+                        <div class="icing icing-4"></div>
+                        <div class="icing icing-5"></div>
+                    </div>
+                    <div class="tier tier-2">
+                        <div class="icing icing-1"></div>
+                        <div class="icing icing-2"></div>
+                        <div class="icing icing-3"></div>
+                        <div class="icing icing-4"></div>
+                    </div>
+                    <div class="tier tier-3">
+                        <div class="icing icing-1"></div>
+                        <div class="icing icing-2"></div>
+                        <div class="icing icing-3"></div>
+                    </div>
+                    <div class="candle">
+                        <div class="flame" id="candle-flame"></div>
+                        <div class="flame-halo" id="candle-halo"></div>
+                    </div>
+                </div>
+                <div class="fireflies"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>
