@@ -300,9 +300,8 @@ function generatePolaroids(startX, startY) {
             mediaEl.setAttribute('playsinline', '');
             mediaEl.setAttribute('webkit-playsinline', '');
             mediaEl.setAttribute('muted', '');
+            mediaEl.preload = 'metadata'; // Giúp load frame đầu tiên để không bị viền đen trên iOS
             mediaEl.className = 'polaroid-media';
-            // Gọi play tường minh để ép autoplay trên một số trình duyệt khó tính (iOS)
-            mediaEl.play().catch(e => console.log('Auto-play prevented', e));
         } else {
             mediaEl = document.createElement('img');
             mediaEl.src = src === 'placeholder' ? `https://picsum.photos/300/300?random=${Math.random()}` : src;
@@ -316,6 +315,17 @@ function generatePolaroids(startX, startY) {
         polaroid.appendChild(mediaEl);
         polaroid.appendChild(caption);
         polaroidContainer.appendChild(polaroid);
+
+        if (isVideo) {
+            // Tối ưu iOS: Gọi load() và play() SAU KHI đã chèn vào DOM
+            mediaEl.load();
+            setTimeout(() => {
+                const playPromise = mediaEl.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(e => console.log('Video autoplay prevented on iOS:', e));
+                }
+            }, 100);
+        }
 
         // Vật lý Zero-gravity: Bắn dạng tỏa tròn (explosion) đẹp hơn
         const angle = Math.random() * Math.PI * 2;
