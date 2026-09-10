@@ -9,8 +9,9 @@ const LOCAL_ASSETS = [
 const WISH_MESSAGE = "Sinh nhật hạnh phúc nha! ✨";
 
 const POLAROID_CAPTIONS = [
-    "Kỷ niệm", "Ngày ấy", "Yêu", "Our moment", "Nhớ", 
-    "Smile 😊", "Beautiful", "Together", "My ❤️"
+    "😊", "❤️", "✨", "🌸", "🌻", 
+    "🥰", "💖", "🎂", "🎉", "🎈",
+    "😘", "🧸", "🎀", "💕"
 ];
 
 // DOM Elements
@@ -289,15 +290,15 @@ function generatePolaroids(startX, startY) {
         polaroid.appendChild(caption);
         polaroidContainer.appendChild(polaroid);
 
-        // Vật lý Zero-gravity: Bắn nhẹ ra rồi trôi chậm
+        // Vật lý Zero-gravity: Bắn nhẹ ra rồi trôi
         const obj = {
             el: polaroid,
             x: startX,
             y: startY,
-            vx: (Math.random() - 0.5) * 8, // Lực đẩy ban đầu
-            vy: (Math.random() - 0.5) * 8, // Lực đẩy ban đầu
+            vx: (Math.random() - 0.5) * 10, // Tăng lực đẩy ban đầu lên một chút
+            vy: (Math.random() - 0.5) * 10,
             rotation: Math.random() * 360,
-            rotSpeed: (Math.random() - 0.5) * 0.4, // Xoay cực kỳ chậm và êm
+            rotSpeed: (Math.random() - 0.5) * 0.8, // Xoay nhanh hơn một xíu
             isHovered: false
         };
         
@@ -321,9 +322,9 @@ function animateZeroGravity() {
 
         // Phanh dần lực đẩy ban đầu để đạt tốc độ trôi lơ lửng êm ái (Cruising speed)
         const currentSpeed = Math.sqrt(obj.vx * obj.vx + obj.vy * obj.vy);
-        if (currentSpeed > 1) {
-            obj.vx *= 0.97;
-            obj.vy *= 0.97;
+        if (currentSpeed > 1.8) { // Tăng giới hạn tốc độ trôi cuối cùng từ 1 lên 1.8
+            obj.vx *= 0.98; // Lực cản giảm nhẹ để phanh từ từ hơn
+            obj.vy *= 0.98;
         }
 
         obj.x += obj.vx;
@@ -366,12 +367,16 @@ function setupPolaroidInteraction(obj) {
 btnMoreMagic.addEventListener('click', () => {
     btnMoreMagic.classList.add('hidden');
     
-    // Mờ lớp polaroid cũ
-    activePolaroids.forEach(obj => {
-        obj.el.classList.add('fading-out');
+    // Mờ lớp polaroid cũ mượt mà tại chính vị trí của nó
+    const oldPolaroids = activePolaroids;
+    activePolaroids = []; // Dừng vòng lặp requestAnimationFrame cho các ảnh cũ
+
+    oldPolaroids.forEach(obj => {
+        obj.el.style.transition = 'transform 1s cubic-bezier(0.4, 0, 0.2, 1), opacity 1s ease';
+        obj.el.style.opacity = '0';
+        obj.el.style.transform = `translate3d(${obj.x}px, ${obj.y - 100}px, 0) scale(0.5) rotate(${obj.rotation + 15}deg)`;
         setTimeout(() => obj.el.remove(), 1000); 
     });
-    activePolaroids = [];
 
     // Tạo pháo hoa mới
     createExplosion(canvasWidth / 2, canvasHeight * 0.3);
