@@ -567,6 +567,7 @@ html, body {
     transform-origin: center center;
     border-radius: 2px;
     background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noise)" opacity="0.04"/></svg>');
+    will-change: transform, box-shadow;
 }
 
 /* Tape effect (Washi Tape Blend) */
@@ -646,22 +647,25 @@ html, body {
         font-size: 1rem;
     }
     
-    .polaroid { padding: 10px 10px 20px 10px; }
-    .polaroid-media { width: 110px; height: 130px; }
-    .polaroid-caption { font-size: 1.2rem; padding-top: 10px; }
-    .polaroid::before { width: 50px; height: 20px; }
+    .polaroid { padding: 8px 8px 16px 8px; }
+    .polaroid-media { width: 80px; height: 100px; }
+    .polaroid-caption { font-size: 1rem; padding-top: 8px; }
+    .polaroid::before { width: 40px; height: 15px; top: -8px; }
 }
 
 @media (min-width: 481px) and (max-width: 768px) {
     .cake { transform: scale(0.85); }
     #wish-text { font-size: 2.2rem; }
-    .polaroid-media { width: 150px; height: 170px; }
+    .polaroid { padding: 10px 10px 20px 10px; }
+    .polaroid-media { width: 110px; height: 130px; }
+    .polaroid-caption { font-size: 1.2rem; padding-top: 10px; }
+    .polaroid::before { width: 50px; height: 20px; top: -10px; }
 }
 
 @media (min-width: 769px) {
-    .polaroid-media { width: 220px; height: 250px; }
-    .polaroid-caption { font-size: 2rem; padding-top: 20px; }
-    .polaroid { padding: 15px 15px 30px 15px; }
-    .polaroid::before { width: 80px; height: 30px; top: -15px; }
+    .polaroid-media { width: 150px; height: 170px; }
+    .polaroid-caption { font-size: 1.5rem; padding-top: 12px; }
+    .polaroid { padding: 12px 12px 24px 12px; }
+    .polaroid::before { width: 60px; height: 25px; top: -12px; }
     #wish-text { font-size: 3rem; }
 }

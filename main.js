@@ -1,9 +1,38 @@
 // Data & Config
 const LOCAL_ASSETS = [
-    // Bạn hãy thay thế bằng các file thực tế trong folder assets
-    // Ví dụ:
-    // 'assets/images/pic1.jpg',
-    // 'assets/videos/vid1.mp4'
+    'assets/images/1.webp',
+    'assets/images/2.webp',
+    'assets/images/3.webp',
+    'assets/images/4.webp',
+    'assets/images/5.webp',
+    'assets/images/6.webp',
+    'assets/images/7.webp',
+    'assets/images/8.webp',
+    'assets/images/9.webp',
+    'assets/images/10.webp',
+    'assets/images/11.webp',
+    'assets/images/12.webp',
+    'assets/images/13.webp',
+    'assets/images/14.webp',
+    'assets/images/18.webp',
+    'assets/images/19.webp',
+    'assets/images/20.webp',
+    'assets/images/21.webp',
+    'assets/images/22.webp',
+    'assets/images/23.webp',
+    'assets/videos/1.mp4',
+    'assets/videos/2.mp4',
+    'assets/videos/3.mp4',
+    'assets/videos/4.mp4',
+    'assets/videos/5.mp4',
+    'assets/videos/6.mp4',
+    'assets/videos/7.mp4',
+    'assets/videos/8.mp4',
+    'assets/videos/9.mp4',
+    'assets/videos/10.mp4',
+    'assets/videos/11.mp4',
+    'assets/videos/12.mp4',
+    'assets/videos/13.mp4'
 ];
 
 const WISH_MESSAGE = "Sinh nhật hạnh phúc nha! ✨";
@@ -234,31 +263,23 @@ function animateCanvas() {
 // Polaroid Zero-gravity Logic
 function generatePolaroids(startX, startY) {
     const windowWidth = window.innerWidth;
-    let minCount, maxCount;
+    let maxItems;
 
     if (windowWidth <= 480) {
-        // Điện thoại (Mobile - dưới 480px): 3 đến 4 ảnh
-        minCount = 3;
-        maxCount = 4;
+        maxItems = 12; // Mobile hiển thị 12 ảnh/video
     } else if (windowWidth <= 768) {
-        // Máy tính bảng (Tablet - từ 480px đến 768px): 5 đến 6 ảnh
-        minCount = 5;
-        maxCount = 6;
+        maxItems = 16; // Tablet hiển thị 16
     } else {
-        // Máy tính/Laptop (Desktop - trên 768px): 7 đến 8 ảnh
-        minCount = 7;
-        maxCount = 8;
+        maxItems = Math.min(LOCAL_ASSETS.length, 24); // Desktop hiển thị tối đa 24 để UI mượt và đẹp nhất
     }
 
-    const count = Math.floor(Math.random() * (maxCount - minCount + 1)) + minCount;
-    
     const itemsToShow = [];
     if (LOCAL_ASSETS.length > 0) {
-        for(let i=0; i<count; i++) {
-            itemsToShow.push(LOCAL_ASSETS[Math.floor(Math.random() * LOCAL_ASSETS.length)]);
-        }
+        // Randomize (Xáo trộn)
+        const shuffled = [...LOCAL_ASSETS].sort(() => 0.5 - Math.random());
+        itemsToShow.push(...shuffled.slice(0, maxItems));
     } else {
-        for(let i=0; i<count; i++) itemsToShow.push('placeholder');
+        for(let i=0; i<maxItems; i++) itemsToShow.push('placeholder');
     }
 
     itemsToShow.forEach((src, index) => {
@@ -290,15 +311,17 @@ function generatePolaroids(startX, startY) {
         polaroid.appendChild(caption);
         polaroidContainer.appendChild(polaroid);
 
-        // Vật lý Zero-gravity: Bắn nhẹ ra rồi trôi
+        // Vật lý Zero-gravity: Bắn dạng tỏa tròn (explosion) đẹp hơn
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 10 + 5; // Tốc độ bắn ban đầu từ 5 đến 15
         const obj = {
             el: polaroid,
             x: startX,
             y: startY,
-            vx: (Math.random() - 0.5) * 10, // Tăng lực đẩy ban đầu lên một chút
-            vy: (Math.random() - 0.5) * 10,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 5, // Hướng lên trên một chút
             rotation: Math.random() * 360,
-            rotSpeed: (Math.random() - 0.5) * 0.8, // Xoay nhanh hơn một xíu
+            rotSpeed: (Math.random() - 0.5) * 1.5,
             isHovered: false
         };
         
@@ -348,16 +371,33 @@ function animateZeroGravity() {
 }
 
 function setupPolaroidInteraction(obj) {
+    const videoEl = obj.el.querySelector('video');
+
     obj.el.addEventListener('mouseenter', () => {
         obj.isHovered = true;
         obj.el.style.zIndex = "100";
-        // Lật thẳng và phóng to ngay tại chỗ
-        obj.el.style.transform = `translate3d(${obj.x}px, ${obj.y}px, 0) scale(1.5) rotate(0deg)`;
+        // Vì ảnh đã thu nhỏ lại để hiển thị nhiều, khi hover sẽ phóng to nhiều hơn
+        const scaleHover = window.innerWidth <= 768 ? 2.2 : 2.8;
+        obj.el.style.transform = `translate3d(${obj.x}px, ${obj.y}px, 0) scale(${scaleHover}) rotate(0deg)`;
+        
+        // Thêm shadow nổi bật hơn khi hover
+        obj.el.style.boxShadow = "0 30px 60px rgba(0,0,0,0.5), 0 0 40px rgba(255,255,255,0.4)";
+        
+        if (videoEl) {
+            videoEl.muted = false;
+            bgMusic.pause();
+        }
     });
 
     obj.el.addEventListener('mouseleave', () => {
         obj.isHovered = false;
         obj.el.style.zIndex = "10";
+        obj.el.style.boxShadow = ""; // Phục hồi shadow ban đầu
+        
+        if (videoEl) {
+            videoEl.muted = true;
+            bgMusic.play().catch(e => console.log("Audio play prevented", e));
+        }
     });
 }
 
