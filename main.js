@@ -180,10 +180,10 @@ function createExplosion(x, y) {
         particles.push({
             x: x,
             y: y,
-            vx: (Math.random() - 0.5) * 20,
-            vy: (Math.random() - 0.5) * 20,
+            vx: (Math.random() - 0.5) * 12, // Giảm từ 20 xuống 12 để nổ nhẹ nhàng hơn
+            vy: (Math.random() - 0.5) * 12,
             life: 1,
-            decay: Math.random() * 0.015 + 0.01,
+            decay: Math.random() * 0.01 + 0.005, // Sống lâu hơn, mờ đi chậm hơn
             color: `hsl(${hue}, 100%, 70%)`,
             size: Math.random() * 3 + 1
         });
@@ -203,9 +203,9 @@ function animateCanvas() {
         let p = particles[i];
         p.x += p.vx;
         p.y += p.vy;
-        p.vy += 0.15; // Gravity nhẹ
-        p.vx *= 0.98; // Ma sát
-        p.vy *= 0.98;
+        p.vy += 0.05; // Trọng lực rất nhẹ để hạt rơi chậm
+        p.vx *= 0.96; // Lực cản không khí lớn hơn để pháo hoa tỏa ra rồi phanh lại mượt mà
+        p.vy *= 0.96;
         p.life -= p.decay;
 
         ctx.fillStyle = p.color;
@@ -232,10 +232,24 @@ function animateCanvas() {
 
 // Polaroid Zero-gravity Logic
 function generatePolaroids(startX, startY) {
-    // Tự động điều chỉnh số lượng ảnh theo kích thước màn hình
-    const isMobile = window.innerWidth <= 480;
-    const maxCount = isMobile ? 3 : (window.innerWidth <= 768 ? 4 : 6);
-    const count = Math.min(Math.floor(Math.random() * 2) + maxCount - 1, maxCount);
+    const windowWidth = window.innerWidth;
+    let minCount, maxCount;
+
+    if (windowWidth <= 480) {
+        // Điện thoại (Mobile - dưới 480px): 3 đến 4 ảnh
+        minCount = 3;
+        maxCount = 4;
+    } else if (windowWidth <= 768) {
+        // Máy tính bảng (Tablet - từ 480px đến 768px): 5 đến 6 ảnh
+        minCount = 5;
+        maxCount = 6;
+    } else {
+        // Máy tính/Laptop (Desktop - trên 768px): 7 đến 8 ảnh
+        minCount = 7;
+        maxCount = 8;
+    }
+
+    const count = Math.floor(Math.random() * (maxCount - minCount + 1)) + minCount;
     
     const itemsToShow = [];
     if (LOCAL_ASSETS.length > 0) {
@@ -275,15 +289,15 @@ function generatePolaroids(startX, startY) {
         polaroid.appendChild(caption);
         polaroidContainer.appendChild(polaroid);
 
-        // Vật lý Zero-gravity
+        // Vật lý Zero-gravity: Bắn nhẹ ra rồi trôi chậm
         const obj = {
             el: polaroid,
             x: startX,
             y: startY,
-            vx: (Math.random() - 0.5) * 10, // Bay ngang chậm
-            vy: (Math.random() - 0.5) * 10, // Bay dọc chậm
+            vx: (Math.random() - 0.5) * 8, // Lực đẩy ban đầu
+            vy: (Math.random() - 0.5) * 8, // Lực đẩy ban đầu
             rotation: Math.random() * 360,
-            rotSpeed: (Math.random() - 0.5) * 2, // Xoay cực nhẹ
+            rotSpeed: (Math.random() - 0.5) * 0.4, // Xoay cực kỳ chậm và êm
             isHovered: false
         };
         
@@ -305,12 +319,19 @@ function animateZeroGravity() {
     activePolaroids.forEach(obj => {
         if (obj.isHovered) return; // Nếu đang trỏ chuột vào thì dừng trôi
 
+        // Phanh dần lực đẩy ban đầu để đạt tốc độ trôi lơ lửng êm ái (Cruising speed)
+        const currentSpeed = Math.sqrt(obj.vx * obj.vx + obj.vy * obj.vy);
+        if (currentSpeed > 1) {
+            obj.vx *= 0.97;
+            obj.vy *= 0.97;
+        }
+
         obj.x += obj.vx;
         obj.y += obj.vy;
         obj.rotation += obj.rotSpeed;
 
-        // Bouncing edge detection (đụng tường bật lại)
-        const margin = 50;
+        // Bouncing edge detection (đụng tường bật lại siêu êm)
+        const margin = 70;
         const limitX = canvasWidth - margin;
         const limitY = canvasHeight - margin;
 
