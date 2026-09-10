@@ -290,18 +290,15 @@ function generatePolaroids(startX, startY) {
         const isVideo = src !== 'placeholder' && (src.endsWith('.mp4') || src.endsWith('.webm') || src.endsWith('.mov'));
         
         if (isVideo) {
-            mediaEl = document.createElement('video');
-            mediaEl.src = src;
-            mediaEl.autoplay = true;
-            mediaEl.loop = true;
+            // Thủ thuật kinh điển cho iOS Safari: Tạo thẻ video bằng innerHTML 
+            // để trình duyệt biên dịch thuộc tính playsinline ngay từ lúc sinh ra (tránh bị nhảy Fullscreen)
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = `<video src="${src}" class="polaroid-media" autoplay loop muted playsinline webkit-playsinline preload="metadata"></video>`;
+            mediaEl = tempDiv.firstElementChild;
+            
+            // Đảm bảo property javascript cũng nhận diện đúng
             mediaEl.muted = true;
             mediaEl.defaultMuted = true;
-            mediaEl.playsInline = true;
-            mediaEl.setAttribute('playsinline', 'playsinline');
-            mediaEl.setAttribute('webkit-playsinline', 'webkit-playsinline');
-            mediaEl.setAttribute('muted', 'muted');
-            mediaEl.preload = 'metadata'; // Giúp load frame đầu tiên để không bị viền đen trên iOS
-            mediaEl.className = 'polaroid-media';
         } else {
             mediaEl = document.createElement('img');
             mediaEl.src = src === 'placeholder' ? `https://picsum.photos/300/300?random=${Math.random()}` : src;
@@ -315,17 +312,6 @@ function generatePolaroids(startX, startY) {
         polaroid.appendChild(mediaEl);
         polaroid.appendChild(caption);
         polaroidContainer.appendChild(polaroid);
-
-        if (isVideo) {
-            // Tối ưu iOS: Gọi load() và play() SAU KHI đã chèn vào DOM
-            mediaEl.load();
-            setTimeout(() => {
-                const playPromise = mediaEl.play();
-                if (playPromise !== undefined) {
-                    playPromise.catch(e => console.log('Video autoplay prevented on iOS:', e));
-                }
-            }, 100);
-        }
 
         // Vật lý Zero-gravity: Bắn dạng tỏa tròn (explosion) đẹp hơn
         const angle = Math.random() * Math.PI * 2;
