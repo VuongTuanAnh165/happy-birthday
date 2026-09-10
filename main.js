@@ -313,6 +313,13 @@ function generatePolaroids(startX, startY) {
         polaroid.appendChild(caption);
         polaroidContainer.appendChild(polaroid);
 
+        // Ngăn chặn lỗi "Click-through" trên iOS: Tạm thời vô hiệu hóa tương tác 
+        // để ảnh không vô tình nhận sự kiện chạm khi người dùng vừa bấm nút "Thêm phép màu"
+        polaroid.style.pointerEvents = 'none';
+        setTimeout(() => {
+            polaroid.style.pointerEvents = 'auto';
+        }, 1000);
+
         // Vật lý Zero-gravity: Bắn dạng tỏa tròn (explosion) đẹp hơn
         const angle = Math.random() * Math.PI * 2;
         const speed = Math.random() * 10 + 5; // Tốc độ bắn ban đầu từ 5 đến 15
@@ -395,8 +402,10 @@ function setupPolaroidInteraction(obj) {
         if (videoEl) {
             videoEl.muted = false;
             bgMusic.pause();
-            // Đảm bảo video play nếu nó bị dừng trên mobile
-            videoEl.play().catch(e => console.log('Video play prevented', e));
+            // Tránh gọi play() liên tục trên iOS nếu video đang chạy (nguyên nhân gây full màn hình)
+            if (videoEl.paused) {
+                videoEl.play().catch(e => console.log('Video play prevented', e));
+            }
         }
     };
 
