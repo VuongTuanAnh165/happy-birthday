@@ -297,9 +297,9 @@ function generatePolaroids(startX, startY) {
             mediaEl.muted = true;
             mediaEl.defaultMuted = true;
             mediaEl.playsInline = true;
-            mediaEl.setAttribute('playsinline', '');
-            mediaEl.setAttribute('webkit-playsinline', '');
-            mediaEl.setAttribute('muted', '');
+            mediaEl.setAttribute('playsinline', 'playsinline');
+            mediaEl.setAttribute('webkit-playsinline', 'webkit-playsinline');
+            mediaEl.setAttribute('muted', 'muted');
             mediaEl.preload = 'metadata'; // Giúp load frame đầu tiên để không bị viền đen trên iOS
             mediaEl.className = 'polaroid-media';
         } else {
