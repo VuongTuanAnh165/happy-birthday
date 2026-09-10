@@ -323,7 +323,7 @@ html, body {
     backdrop-filter: blur(5px);
     -webkit-backdrop-filter: blur(5px);
     box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    z-index: 2; /* Lùi sau ảnh polaroid */
+    z-index: 20; /* Đưa lên trên ảnh polaroid để dễ bấm nút */
 }
 
 #wish-text {
