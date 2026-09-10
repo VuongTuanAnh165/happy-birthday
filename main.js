@@ -290,10 +290,19 @@ function generatePolaroids(startX, startY) {
         const isVideo = src !== 'placeholder' && (src.endsWith('.mp4') || src.endsWith('.webm') || src.endsWith('.mov'));
         
         if (isVideo) {
+            // Nhận diện Zalo / In-App browser trên iOS (những app cố tình chặn phát video thu nhỏ)
+            const ua = navigator.userAgent;
+            const isIOS = /iPad|iPhone|iPod/.test(ua);
+            const isInAppBrowser = /Zalo|FBAN|FBAV|Instagram|Line/i.test(ua);
+            const preventAutoPlay = isIOS && isInAppBrowser;
+            
+            const autoplayAttr = preventAutoPlay ? '' : 'autoplay';
+            const preloadAttr = preventAutoPlay ? 'auto' : 'metadata';
+
             // Thủ thuật kinh điển cho iOS Safari: Tạo thẻ video bằng innerHTML 
             // để trình duyệt biên dịch thuộc tính playsinline ngay từ lúc sinh ra (tránh bị nhảy Fullscreen)
             const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = `<video src="${src}" class="polaroid-media" autoplay loop muted playsinline webkit-playsinline preload="metadata"></video>`;
+            tempDiv.innerHTML = `<video src="${src}" class="polaroid-media" ${autoplayAttr} loop muted playsinline webkit-playsinline preload="${preloadAttr}"></video>`;
             mediaEl = tempDiv.firstElementChild;
             
             // Đảm bảo property javascript cũng nhận diện đúng
