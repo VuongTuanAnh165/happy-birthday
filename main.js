@@ -351,32 +351,57 @@ function shootFireworks() {
     // 2. Thu nhỏ và đưa bảng chữ lên góc trên (Responsive UI)
     wishGlassPanel.classList.add('minimized');
 
-    // 3. Tạo hạt Canvas pháo hoa bay lên
-    const x = canvasWidth / 2;
-    const y = canvasHeight; // bắn từ dưới lên
-    const explodeY = canvasHeight * 0.3; // Nổ ở giữa trên
-    createExplosion(x, explodeY);
-
-    // 4. Sinh Polaroids lơ lửng
+    // 3. Sinh Polaroids lơ lửng (chỉ tạo 1 lần)
     setTimeout(() => {
-        generatePolaroids(x, explodeY);
+        generatePolaroids(canvasWidth / 2, canvasHeight * 0.3);
     }, 100); 
+    
+    // 4. Bắn pháo hoa liên tục tự động
+    startContinuousFireworks();
+    
+    // 5. Hiển thị lại nút tráo ảnh sau 4 giây
+    setTimeout(() => {
+        btnMoreMagic.classList.remove('hidden');
+    }, 4000);
+}
+
+function startContinuousFireworks() {
+    // Phát nổ đầu tiên rực rỡ ở giữa
+    createExplosion(canvasWidth / 2, canvasHeight * 0.3, 150);
+    
+    // Lặp lại bắn pháo hoa ngẫu nhiên khắp màn hình
+    setInterval(() => {
+        // Mỗi nhịp bắn từ 1 đến 3 chùm pháo hoa
+        const numExplosions = Math.floor(Math.random() * 3) + 1;
+        
+        for(let i = 0; i < numExplosions; i++) {
+            // Chênh lệch một chút xíu thời gian giữa các chùm nổ để tạo cảm giác tự nhiên
+            setTimeout(() => {
+                const x = canvasWidth * 0.1 + Math.random() * (canvasWidth * 0.8);
+                const y = canvasHeight * 0.1 + Math.random() * (canvasHeight * 0.8);
+                
+                // Số hạt dao động từ 50 - 80 hạt cho mỗi chùm
+                createExplosion(x, y, 50 + Math.random() * 30);
+            }, Math.random() * 600);
+        }
+    }, 1200 + Math.random() * 1000); // Khoảng thời gian bắn cũng nhanh hơn (1.2s - 2.2s)
 }
 
 // Canvas Sparkles logic
-function createExplosion(x, y) {
-    const count = 150; 
+function createExplosion(x, y, count = 80) {
     for(let i=0; i<count; i++) {
         const hue = Math.random() > 0.5 ? Math.random() * 60 + 300 : Math.random() * 60 + 30; // Pink/Gold tones
         particles.push({
             x: x,
             y: y,
-            vx: (Math.random() - 0.5) * 12, // Giảm từ 20 xuống 12 để nổ nhẹ nhàng hơn
-            vy: (Math.random() - 0.5) * 12,
+            lastX: x,
+            lastY: y,
+            vx: (Math.random() - 0.5) * 10,
+            vy: (Math.random() - 0.5) * 10,
             life: 1,
-            decay: Math.random() * 0.01 + 0.005, // Sống lâu hơn, mờ đi chậm hơn
+            decay: Math.random() * 0.015 + 0.005, // Phân hủy nhanh hơn để không bị rác màn hình
             color: `hsl(${hue}, 100%, 70%)`,
-            size: Math.random() * 3 + 1
+            size: Math.random() * 2.5 + 1
         });
     }
     if(!isAnimatingCanvas) animateCanvas();
@@ -384,30 +409,35 @@ function createExplosion(x, y) {
 
 function animateCanvas() {
     isAnimatingCanvas = true;
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    // Dùng clearRect cực nhanh thay cho destination-out
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
     
     ctx.globalCompositeOperation = 'lighter'; 
+    ctx.lineCap = 'round';
     
     for(let i=0; i<particles.length; i++) {
         let p = particles[i];
+        
+        // Vẽ vệt đuôi bằng lineTo siêu mượt
+        ctx.beginPath();
+        ctx.moveTo(p.lastX, p.lastY);
+        ctx.lineTo(p.x, p.y);
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = p.size;
+        ctx.globalAlpha = p.life;
+        ctx.stroke();
+        
+        // Cập nhật vị trí cũ trước khi dịch chuyển
+        p.lastX = p.x;
+        p.lastY = p.y;
+        
+        // Cập nhật vị trí mới
         p.x += p.vx;
         p.y += p.vy;
         p.vy += 0.05; // Trọng lực rất nhẹ để hạt rơi chậm
         p.vx *= 0.96; // Lực cản không khí lớn hơn để pháo hoa tỏa ra rồi phanh lại mượt mà
         p.vy *= 0.96;
         p.life -= p.decay;
-
-        ctx.fillStyle = p.color;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
-        ctx.fill();
-        
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = p.color;
-        ctx.fill();
-        ctx.shadowBlur = 0;
     }
     
     particles = particles.filter(p => p.life > 0);
@@ -500,7 +530,7 @@ function generatePolaroids(startX, startY) {
             vx: Math.cos(angle) * speed,
             vy: Math.sin(angle) * speed - 5, // Hướng lên trên một chút
             rotation: Math.random() * 360,
-            rotSpeed: (Math.random() - 0.5) * 1.5,
+            rotSpeed: (Math.random() - 0.5) * 0.8, // Tăng tốc độ xoay lên 0.8 (vừa phải)
             isHovered: false
         };
         
@@ -511,11 +541,6 @@ function generatePolaroids(startX, startY) {
     if (!animationFrameId) {
         animateZeroGravity();
     }
-
-    // Nút bắn tiếp hiển thị lại ở trên bảng chữ
-    setTimeout(() => {
-        btnMoreMagic.classList.remove('hidden');
-    }, 4000);
 }
 
 function animateZeroGravity() {
@@ -524,9 +549,9 @@ function animateZeroGravity() {
 
         // Phanh dần lực đẩy ban đầu để đạt tốc độ trôi lơ lửng êm ái (Cruising speed)
         const currentSpeed = Math.sqrt(obj.vx * obj.vx + obj.vy * obj.vy);
-        if (currentSpeed > 1.8) { // Tăng giới hạn tốc độ trôi cuối cùng từ 1 lên 1.8
-            obj.vx *= 0.98; // Lực cản giảm nhẹ để phanh từ từ hơn
-            obj.vy *= 0.98;
+        if (currentSpeed > 1.0) { // Tăng nhẹ giới hạn từ 0.6 lên 1.0 để không bị quá chậm
+            obj.vx *= 0.96; 
+            obj.vy *= 0.96;
         }
 
         obj.x += obj.vx;
@@ -652,7 +677,7 @@ function setupPolaroidInteraction(obj) {
 });
 
 // ==========================================
-// LOOP: Bắn pháo hoa tiếp
+// LOOP: Tráo ảnh (Nút Thêm phép màu)
 // ==========================================
 btnMoreMagic.addEventListener('click', () => {
     btnMoreMagic.classList.add('hidden');
@@ -668,9 +693,16 @@ btnMoreMagic.addEventListener('click', () => {
         setTimeout(() => obj.el.remove(), 1000); 
     });
 
-    // Tạo pháo hoa mới
-    createExplosion(canvasWidth / 2, canvasHeight * 0.3);
+    // Tạo pháo hoa to nổ ở giữa (tách biệt với pháo hoa nền)
+    createExplosion(canvasWidth / 2, canvasHeight * 0.3, 150);
+    
+    // Tráo bộ ảnh mới
     setTimeout(() => {
         generatePolaroids(canvasWidth / 2, canvasHeight * 0.3);
     }, 100);
+    
+    // Hiện lại nút sau 4 giây
+    setTimeout(() => {
+        btnMoreMagic.classList.remove('hidden');
+    }, 4000);
 });
