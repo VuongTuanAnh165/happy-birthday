@@ -73,6 +73,55 @@ window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
 // ==========================================
+// V4: Cinematic Dust & Hologram Box
+// ==========================================
+function createDust() {
+    const container = document.getElementById('dust-container');
+    if (!container) return;
+    for(let i=0; i<40; i++) {
+        const dust = document.createElement('div');
+        dust.className = 'dust';
+        dust.style.left = `${Math.random() * 100}%`;
+        dust.style.top = `${Math.random() * 100}%`;
+        const size = Math.random() * 3 + 1;
+        dust.style.width = `${size}px`;
+        dust.style.height = `${size}px`;
+        dust.style.animationDelay = `${Math.random() * 5}s`;
+        dust.style.animationDuration = `${5 + Math.random() * 5}s`;
+        container.appendChild(dust);
+    }
+}
+createDust();
+
+const giftBox = document.getElementById('btn-open-gift');
+const glare = document.querySelector('.hologram-glare');
+
+giftBox.addEventListener('mousemove', (e) => {
+    const rect = giftBox.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    
+    const tiltX = (y - centerY) / centerY * -15; // Âm để nghiêng tự nhiên
+    const tiltY = (centerX - x) / centerX * -15;
+    
+    giftBox.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) scale(1.1)`;
+    
+    if (glare) {
+        const glareX = (x / rect.width) * 100;
+        const glareY = (y / rect.height) * 100;
+        glare.style.backgroundPosition = `${glareX}% ${glareY}%`;
+    }
+});
+
+giftBox.addEventListener('mouseleave', () => {
+    giftBox.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)`;
+    if (glare) glare.style.backgroundPosition = `-100% -100%`;
+});
+
+// ==========================================
 // PHASE 2: Mở quà và thắp sáng
 // ==========================================
 function openGift() {
@@ -149,30 +198,43 @@ function handleMeshGradientMove(e) {
 }
 
 // ==========================================
-// PHASE 3: Lời chúc & Thổi nến
+// PHASE 3: Lời chúc & Thổi nến (Apple-style Blur Reveal)
 // ==========================================
 function typeWriterWish() {
-    let i = 0;
     wishTextEl.innerHTML = '';
-    cursorEl.classList.remove('hidden');
-    const speed = 60; // ms per char
-
-    function type() {
-        if (i < WISH_MESSAGE.length) {
-            wishTextEl.innerHTML += WISH_MESSAGE.charAt(i);
-            i++;
-            setTimeout(type, speed);
-        } else {
-            // Chớp chớp con trỏ vài giây rồi ẩn
-            setTimeout(() => {
-                cursorEl.classList.add('hidden');
-                btnBlowCandle.classList.remove('hidden');
-                // Bật mic để thổi nến
-                initMicrophone();
-            }, 1000);
-        }
-    }
-    type();
+    cursorEl.classList.add('hidden'); // Không cần cursor nữa
+    
+    const words = WISH_MESSAGE.split(' ');
+    let charDelay = 0;
+    
+    words.forEach((word) => {
+        const wordSpan = document.createElement('span');
+        wordSpan.style.display = 'inline-block';
+        wordSpan.style.marginRight = '12px'; // Khoảng cách giữa các chữ
+        
+        const chars = word.split('');
+        chars.forEach((char) => {
+            const charSpan = document.createElement('span');
+            charSpan.className = 'char-reveal';
+            charSpan.innerText = char;
+            charSpan.style.animationDelay = `${charDelay * 0.08}s`; // 80ms cho mỗi chữ
+            wordSpan.appendChild(charSpan);
+            charDelay++;
+        });
+        
+        wishTextEl.appendChild(wordSpan);
+    });
+    
+    // Chờ text chạy xong thì bật nến
+    const totalTime = charDelay * 80 + 1000;
+    setTimeout(() => {
+        btnBlowCandle.classList.remove('hidden');
+        initMicrophone();
+        
+        // Kích hoạt bóng đổ động cho bánh
+        const shadow = document.querySelector('.cake-shadow');
+        if (shadow) shadow.classList.add('flicker');
+    }, totalTime);
 }
 
 function triggerBlowCandle() {
@@ -181,6 +243,11 @@ function triggerBlowCandle() {
     candleFlame.classList.add('out');
     candleHalo.classList.add('out');
     btnBlowCandle.classList.add('hidden');
+    
+    // Tắt bóng đổ động
+    const shadow = document.querySelector('.cake-shadow');
+    if (shadow) shadow.classList.remove('flicker');
+    
     if (micStream) {
         micStream.getTracks().forEach(track => track.stop());
     }
