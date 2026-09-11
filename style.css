@@ -40,33 +40,18 @@ html, body {
     pointer-events: auto;
 }
 
-body.focus-mode #scene-2 {
+body.focus-mode #scene-2 > *:not(#polaroid-container) {
     filter: blur(8px) brightness(0.6);
 }
 
-/* ==========================================
-   Màn 0: Preloader
-   ========================================== */
-#preloader {
-    background: #0b0c10;
-    z-index: 100;
+body.focus-mode #polaroid-container .polaroid:not(:hover) {
+    filter: blur(4px) brightness(0.7);
 }
 
-.preloader-content {
-    text-align: center;
-    animation: fadeIn 2s ease-in-out;
+#scene-2 > * {
+    transition: filter 0.5s ease;
 }
 
-.preloader-content p {
-    font-size: 1.5rem;
-    margin-bottom: 30px;
-    color: #ffd700;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
 
 /* ==========================================
    Màn 1: Parallax Night Sky
@@ -356,10 +341,10 @@ body.focus-mode #scene-2 {
 
 #wish-text {
     font-family: 'Dancing Script', cursive;
-    font-size: 2.5rem;
+    font-size: 3rem;
     line-height: 1.6;
-    color: #ff4d6d; /* Đổi màu chữ sang hồng đậm nổi bật trên nền sáng */
-    text-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+    color: #ff2a55;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.8), 0 0 20px rgba(255, 42, 85, 0.4);
     display: inline;
 }
 
@@ -498,9 +483,9 @@ body.focus-mode #scene-2 {
     transform: translateX(-50%);
     width: 16px;
     height: 28px;
-    background: radial-gradient(ellipse at center, #fff 0%, #fdcb6e 50%, #e17055 100%);
+    background: radial-gradient(ellipse at center, #fff 0%, #ffeb3b 40%, #ff9800 80%, #ff5722 100%);
     border-radius: 50% 50% 20% 20%;
-    box-shadow: 0 0 20px #ffeaa7, 0 0 40px #fdcb6e, 0 -10px 60px #e17055;
+    box-shadow: 0 0 20px #ffeaa7, 0 0 40px #ff9800, 0 -10px 60px #ff5722;
     animation: flicker 0.6s infinite alternate;
     transform-origin: bottom center;
     z-index: 2;

@@ -44,8 +44,6 @@ const POLAROID_CAPTIONS = [
 ];
 
 // DOM Elements
-const preloader = document.getElementById('preloader');
-const btnStart = document.getElementById('btn-start');
 const scene1 = document.getElementById('scene-1');
 const scene2 = document.getElementById('scene-2');
 const btnOpenGift = document.getElementById('btn-open-gift');
@@ -75,20 +73,11 @@ window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
 // ==========================================
-// PHASE 0 & 1: Preloader & Lời mời bí ẩn
-// ==========================================
-btnStart.addEventListener('click', () => {
-    preloader.classList.remove('active');
-    scene1.classList.add('active');
-    
-    // Play music now that user has interacted
-    bgMusic.play().catch(e => console.log("Audio play prevented", e));
-});
-
-// ==========================================
 // PHASE 2: Mở quà và thắp sáng
 // ==========================================
 function openGift() {
+    // Phát nhạc ngay lập tức khi click
+    bgMusic.play().catch(e => console.log("Audio play prevented", e));
     
     // 2. Animate gift opening
     const lid = document.querySelector('.gift-lid');
@@ -224,6 +213,8 @@ async function initMicrophone() {
         const bufferLength = analyser.frequencyBinCount;
         const dataArray = new Uint8Array(bufferLength);
         
+        let blowFrames = 0;
+        
         function detectBlow() {
             if (candleFlame.classList.contains('out')) return;
             
@@ -236,11 +227,19 @@ async function initMicrophone() {
             }
             const average = sum / (bufferLength / 3);
             
-            if (average > 100) { // Ngưỡng nhận diện, có thể tinh chỉnh
-                triggerBlowCandle();
+            // Ngưỡng 80, nhưng phải kéo dài liên tục khoảng 15 frames (~0.25s) 
+            // để phân biệt tiếng thổi với các tiếng động ngắn/tiếng ồn nền
+            if (average > 80) { 
+                blowFrames++;
+                if (blowFrames > 15) {
+                    triggerBlowCandle();
+                    return;
+                }
             } else {
-                requestAnimationFrame(detectBlow);
+                blowFrames = 0; // Reset nếu âm thanh bị ngắt quãng
             }
+            
+            requestAnimationFrame(detectBlow);
         }
         detectBlow();
     } catch (err) {
