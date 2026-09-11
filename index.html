@@ -18,8 +18,16 @@
         <source src="assets/audio/song.mp3" type="audio/mpeg">
     </audio>
 
+    <!-- Màn 0: Preloader -->
+    <div id="preloader" class="scene active">
+        <div class="preloader-content">
+            <p>Đeo tai nghe hoặc bật tiếng để có trải nghiệm tốt nhất nhé... 🎧</p>
+            <button class="glass-btn pulse-btn" id="btn-start">Bắt đầu nào ✨</button>
+        </div>
+    </div>
+
     <!-- Màn 1: Lời mời bí ẩn -->
-    <div id="scene-1" class="scene active">
+    <div id="scene-1" class="scene">
         <!-- Parallax Stars -->
         <div class="stars stars-1"></div>
         <div class="stars stars-2"></div>
@@ -55,7 +63,7 @@
                 <p id="wish-text"></p><span id="cursor" class="hidden">|</span>
                 
                 <div class="action-buttons">
-                    <button id="btn-blow-candle" class="glass-btn hidden">Thổi nến 🌬️</button>
+                    <button id="btn-blow-candle" class="glass-btn hidden">Thổi nến hoặc bấm vào đây 🌬️</button>
                     <button id="btn-more-magic" class="glass-btn hidden">Thêm chút phép màu nhé ✨</button>
                 </div>
             </div>
@@ -87,6 +95,7 @@
                         <div class="flame-halo" id="candle-halo"></div>
                     </div>
                 </div>
+                <div class="sprinkles-container"></div>
                 <div class="fireflies"></div>
             </div>
         </div>

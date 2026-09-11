@@ -28,7 +28,7 @@ html, body {
     overflow: hidden;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 2.5s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity 2.5s cubic-bezier(0.4, 0, 0.2, 1), filter 0.5s ease;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -38,6 +38,34 @@ html, body {
 .scene.active {
     opacity: 1;
     pointer-events: auto;
+}
+
+body.focus-mode #scene-2 {
+    filter: blur(8px) brightness(0.6);
+}
+
+/* ==========================================
+   Màn 0: Preloader
+   ========================================== */
+#preloader {
+    background: #0b0c10;
+    z-index: 100;
+}
+
+.preloader-content {
+    text-align: center;
+    animation: fadeIn 2s ease-in-out;
+}
+
+.preloader-content p {
+    font-size: 1.5rem;
+    margin-bottom: 30px;
+    color: #ffd700;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 /* ==========================================
@@ -532,6 +560,32 @@ html, body {
     100% { transform: translate(calc(150px - 75px), -300px) scale(0.2); opacity: 0; }
 }
 
+/* Sprinkles (Kẹo cốm) */
+.sprinkles-container {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 5;
+}
+
+.sprinkle {
+    position: absolute;
+    width: 4px;
+    height: 12px;
+    border-radius: 2px;
+    animation: sprinkleFall 3s linear forwards;
+}
+
+@keyframes sprinkleFall {
+    0% { transform: translateY(-50px) rotate(0deg); opacity: 1; }
+    80% { opacity: 1; }
+    100% { transform: translateY(300px) rotate(360deg); opacity: 0; }
+}
+
 /* ==========================================
    Màn 4: Canvas & Polaroids (Zero Gravity)
    ========================================== */
@@ -596,6 +650,17 @@ html, body {
     box-shadow: inset 0 0 10px rgba(0,0,0,0.4);
     /* Vintage Filter */
     filter: sepia(0.2) contrast(1.1) saturate(1.1);
+}
+
+.polaroid .glare {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+    border-radius: 2px;
 }
 
 .polaroid-caption {

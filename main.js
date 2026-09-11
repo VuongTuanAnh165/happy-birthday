@@ -44,6 +44,8 @@ const POLAROID_CAPTIONS = [
 ];
 
 // DOM Elements
+const preloader = document.getElementById('preloader');
+const btnStart = document.getElementById('btn-start');
 const scene1 = document.getElementById('scene-1');
 const scene2 = document.getElementById('scene-2');
 const btnOpenGift = document.getElementById('btn-open-gift');
@@ -73,11 +75,20 @@ window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
 // ==========================================
-// PHASE 1 & 2: Mở quà và thắp sáng
+// PHASE 0 & 1: Preloader & Lời mời bí ẩn
+// ==========================================
+btnStart.addEventListener('click', () => {
+    preloader.classList.remove('active');
+    scene1.classList.add('active');
+    
+    // Play music now that user has interacted
+    bgMusic.play().catch(e => console.log("Audio play prevented", e));
+});
+
+// ==========================================
+// PHASE 2: Mở quà và thắp sáng
 // ==========================================
 function openGift() {
-    // 1. Play music
-    bgMusic.play().catch(e => console.log("Audio play prevented", e));
     
     // 2. Animate gift opening
     const lid = document.querySelector('.gift-lid');
@@ -85,18 +96,25 @@ function openGift() {
     lid.style.opacity = '0';
     btnInvite.style.opacity = '0';
     
-    // 3. Transition scenes
-    setTimeout(() => {
-        scene1.classList.remove('active');
-        scene2.classList.add('active');
-        cakeContainer.classList.remove('hidden');
-        
-        // Tạo đom đóm quanh bánh kem
-        createFireflies();
-        
-        // Bắt đầu gõ lời chúc
-        setTimeout(typeWriterWish, 2000);
-    }, 1200);
+        // 3. Transition scenes (Circle Reveal)
+        scene1.style.clipPath = 'circle(0% at 50% 50%)';
+        setTimeout(() => {
+            scene1.classList.remove('active');
+            scene2.classList.add('active');
+            cakeContainer.classList.remove('hidden');
+            
+            // Tạo đom đóm quanh bánh kem
+            createFireflies();
+            
+            // Tạo kẹo cốm rắc
+            createSprinkles();
+
+            // Lắng nghe chuột để di chuyển Mesh Gradient
+            document.addEventListener('mousemove', handleMeshGradientMove);
+            
+            // Bắt đầu gõ lời chúc
+            setTimeout(typeWriterWish, 2000);
+        }, 800); // Đợi clip-path chạy xong
 }
 
 btnOpenGift.addEventListener('click', openGift);
@@ -113,6 +131,32 @@ function createFireflies() {
         firefly.style.animationDelay = `${Math.random() * 5}s`;
         container.appendChild(firefly);
     }
+}
+
+function createSprinkles() {
+    const container = document.querySelector('.sprinkles-container');
+    const colors = ['#ff7675', '#74b9ff', '#55efc4', '#ffeaa7', '#a29bfe'];
+    for (let i = 0; i < 40; i++) {
+        const sprinkle = document.createElement('div');
+        sprinkle.classList.add('sprinkle');
+        sprinkle.style.left = `${Math.random() * 100}%`;
+        sprinkle.style.top = `${Math.random() * -100}%`;
+        sprinkle.style.background = colors[Math.floor(Math.random() * colors.length)];
+        sprinkle.style.transform = `rotate(${Math.random() * 360}deg)`;
+        sprinkle.style.animationDelay = `${Math.random() * 2}s`;
+        container.appendChild(sprinkle);
+    }
+}
+
+function handleMeshGradientMove(e) {
+    const blobs = document.querySelectorAll('.blob');
+    const x = (e.clientX / window.innerWidth - 0.5) * 40;
+    const y = (e.clientY / window.innerHeight - 0.5) * 40;
+    
+    blobs.forEach((blob, index) => {
+        const multiplier = (index + 1) * 1.5;
+        blob.style.transform = `translate(${x * multiplier}px, ${y * multiplier}px)`;
+    });
 }
 
 // ==========================================
@@ -134,16 +178,23 @@ function typeWriterWish() {
             setTimeout(() => {
                 cursorEl.classList.add('hidden');
                 btnBlowCandle.classList.remove('hidden');
+                // Bật mic để thổi nến
+                initMicrophone();
             }, 1000);
         }
     }
     type();
 }
 
-btnBlowCandle.addEventListener('click', () => {
+function triggerBlowCandle() {
+    if (candleFlame.classList.contains('out')) return; // Ngăn thổi nhiều lần
+    
     candleFlame.classList.add('out');
     candleHalo.classList.add('out');
     btnBlowCandle.classList.add('hidden');
+    if (micStream) {
+        micStream.getTracks().forEach(track => track.stop());
+    }
     
     createSmoke(candleFlame.getBoundingClientRect());
 
@@ -151,7 +202,51 @@ btnBlowCandle.addEventListener('click', () => {
     setTimeout(() => {
         shootFireworks();
     }, 1500);
-});
+}
+
+btnBlowCandle.addEventListener('click', triggerBlowCandle);
+
+// Nhận diện âm thanh thổi (Web Audio API)
+let audioContext;
+let analyser;
+let microphone;
+let micStream;
+
+async function initMicrophone() {
+    try {
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioContext.createAnalyser();
+        microphone = audioContext.createMediaStreamSource(micStream);
+        
+        microphone.connect(analyser);
+        analyser.fftSize = 256;
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        
+        function detectBlow() {
+            if (candleFlame.classList.contains('out')) return;
+            
+            analyser.getByteFrequencyData(dataArray);
+            
+            let sum = 0;
+            // Tập trung vào các tần số thấp tương ứng với tiếng thổi (gió)
+            for (let i = 0; i < bufferLength / 3; i++) {
+                sum += dataArray[i];
+            }
+            const average = sum / (bufferLength / 3);
+            
+            if (average > 100) { // Ngưỡng nhận diện, có thể tinh chỉnh
+                triggerBlowCandle();
+            } else {
+                requestAnimationFrame(detectBlow);
+            }
+        }
+        detectBlow();
+    } catch (err) {
+        console.log("Mic access denied or not supported. Fallback to click button.", err);
+    }
+}
 
 function createSmoke(rect) {
     const smoke = document.createElement('div');
@@ -405,8 +500,14 @@ function setupPolaroidInteraction(obj) {
         const scaleHover = window.innerWidth <= 768 ? 2.2 : 2.8;
         obj.el.style.transform = `translate3d(${obj.x}px, ${obj.y}px, 0) scale(${scaleHover}) rotate(0deg)`;
         
+        // Focus mode: làm mờ background
+        document.body.classList.add('focus-mode');
+        
         // Thêm shadow nổi bật hơn khi hover
         obj.el.style.boxShadow = "0 30px 60px rgba(0,0,0,0.5), 0 0 40px rgba(255,255,255,0.4)";
+        
+        // Thêm hiệu ứng di chuột lật 3D (Tilt effect) cho bức ảnh này
+        obj.el.addEventListener('mousemove', obj.tiltHandler);
         
         if (videoEl) {
             videoEl.muted = false;
@@ -422,11 +523,45 @@ function setupPolaroidInteraction(obj) {
         obj.isHovered = false;
         obj.el.style.zIndex = "10";
         obj.el.style.boxShadow = ""; // Phục hồi shadow ban đầu
+        obj.el.style.transform = `translate3d(${obj.x}px, ${obj.y}px, 0) rotate(${obj.rotation}deg)`; // Phục hồi rotation
         
+        // Tắt focus mode
+        if (activePolaroids.every(p => !p.isHovered)) {
+            document.body.classList.remove('focus-mode');
+        }
+        
+        obj.el.removeEventListener('mousemove', obj.tiltHandler);
+        obj.el.querySelector('.glare')?.remove();
+
         if (videoEl) {
             videoEl.muted = true;
             bgMusic.play().catch(e => console.log("Audio play prevented", e));
         }
+    };
+
+    obj.tiltHandler = function(e) {
+        const rect = obj.el.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        
+        const tiltX = (y - centerY) / centerY * 15; // Cường độ tilt (độ)
+        const tiltY = (centerX - x) / centerX * 15;
+        
+        // Tái sử dụng scale Hover 
+        const scaleHover = window.innerWidth <= 768 ? 2.2 : 2.8;
+        obj.el.style.transform = `translate3d(${obj.x}px, ${obj.y}px, 0) scale(${scaleHover}) perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`;
+        
+        // Cập nhật lóa sáng (glare)
+        let glare = obj.el.querySelector('.glare');
+        if (!glare) {
+            glare = document.createElement('div');
+            glare.className = 'glare';
+            obj.el.appendChild(glare);
+        }
+        const angle = Math.atan2(y - centerY, x - centerX) * (180 / Math.PI) - 90;
+        glare.style.background = `linear-gradient(${angle}deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 80%)`;
     };
 
     obj.unhover = handleUnhover;
