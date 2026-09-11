@@ -44,7 +44,7 @@ body.focus-mode #scene-2 > *:not(#polaroid-container) {
     filter: blur(8px) brightness(0.6);
 }
 
-body.focus-mode #polaroid-container .polaroid:not(:hover) {
+body.focus-mode #polaroid-container .polaroid:not(:hover):not(.active) {
     filter: blur(4px) brightness(0.7);
 }
 
@@ -89,6 +89,7 @@ body.focus-mode #polaroid-container .polaroid:not(:hover) {
 
 /* 3D Gift Box */
 .gift-container {
+    position: relative;
     text-align: center;
     display: flex;
     flex-direction: column;
@@ -174,7 +175,7 @@ body.focus-mode #polaroid-container .polaroid:not(:hover) {
     border-radius: 8px;
     box-shadow: 0 10px 15px rgba(0,0,0,0.3), inset 0 2px 5px rgba(255,255,255,0.4);
     z-index: 2;
-    transition: transform 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    transition: transform 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55), opacity 0.6s ease 0.3s;
 }
 
 .gift-lid::after {
@@ -340,17 +341,36 @@ body.focus-mode #polaroid-container .polaroid:not(:hover) {
     text-align: center;
     box-shadow: 0 20px 50px rgba(0,0,0,0.1);
     pointer-events: auto;
-    transition: all 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+    /* V5: Animation mượt mà lướt xuống và lơ lửng */
+    animation: glideInDown 1.5s cubic-bezier(0.215, 0.610, 0.355, 1.000),
+               floatGlass 6s ease-in-out infinite 1.5s;
+    transition: transform 1.5s cubic-bezier(0.4, 0, 0.2, 1), padding 1.5s, background 1.5s, box-shadow 1.5s;
+}
+
+@keyframes glideInDown {
+    0% { opacity: 0; transform: translateY(-80px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes floatGlass {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
 }
 
 .wish-glass-panel.minimized {
-    transform: translateY(-20vh) scale(0.65);
+    animation: none; /* V5 Fix: Dừng float */
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%) scale(0.7);
+    transform-origin: center top;
+    margin: 0;
     padding: 20px 40px;
-    background: rgba(255, 255, 255, 0.02);
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    z-index: 20; /* Đưa lên trên ảnh polaroid để dễ bấm nút */
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+    z-index: 999; /* Luôn nằm trên cùng, không bị ảnh che lấp */
 }
 
 #wish-text {
@@ -387,15 +407,18 @@ body.focus-mode #polaroid-container .polaroid:not(:hover) {
 }
 
 .action-buttons {
-    margin-top: 30px;
     display: flex;
     gap: 20px;
     justify-content: center;
-    min-height: 50px;
+}
+
+.action-buttons .glass-btn {
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .hidden {
     display: none !important;
+    margin-top: 0 !important;
 }
 
 /* Cake 3D */
@@ -511,17 +534,28 @@ body.focus-mode #polaroid-container .polaroid:not(:hover) {
 
 .flame {
     position: absolute;
-    top: -25px;
+    bottom: 25px;
     left: 50%;
     transform: translateX(-50%);
-    width: 16px;
-    height: 28px;
-    background: radial-gradient(ellipse at center, #fff 0%, #ffeb3b 40%, #ff9800 80%, #ff5722 100%);
+    width: 15px;
+    height: 30px;
+    background: radial-gradient(ellipse, #fff 0%, #ffeb3b 30%, #ff9800 70%, #ff5722 100%);
     border-radius: 50% 50% 20% 20%;
-    box-shadow: 0 0 20px #ffeaa7, 0 0 40px #ff9800, 0 -10px 60px #ff5722;
-    animation: flicker 0.6s infinite alternate;
+    box-shadow: 0 0 15px rgba(255, 152, 0, 0.8), 0 0 30px rgba(255, 87, 34, 0.6);
+    filter: blur(1px);
     transform-origin: bottom center;
-    z-index: 2;
+    animation: flickerIdle 2s infinite alternate, breatheFlame 4s ease-in-out infinite alternate;
+    transition: all 0.3s ease;
+}
+
+@keyframes flickerIdle {
+    0% { transform: translateX(-50%) rotate(-2deg) scale(1); }
+    100% { transform: translateX(-50%) rotate(2deg) scale(1.05); }
+}
+
+@keyframes breatheFlame {
+    0% { filter: brightness(1); }
+    100% { filter: brightness(1.2); }
 }
 
 .flame-halo {
@@ -697,35 +731,46 @@ body.focus-mode #polaroid-container .polaroid:not(:hover) {
    Responsive (Mobile First Design)
    ========================================== */
 @media (max-width: 480px) {
-    .gift-box { width: 120px; height: 120px; }
-    .gift-body { width: 120px; height: 90px; }
-    .gift-lid { width: 140px; left: -10px; height: 35px; }
-    .cake { transform: scale(0.7); }
+    /* V6 Fix: Thu nhỏ quà và nút bấm */
+    .gift-box { width: 100px; height: 100px; }
+    .gift-body { width: 100px; height: 75px; }
+    .gift-lid { width: 120px; left: -10px; height: 30px; }
     
-    .wish-glass-panel { padding: 20px; }
-    #wish-text { font-size: 1.8rem; }
+    .glass-btn {
+        padding: 10px 20px !important;
+        font-size: 1rem !important;
+    }
+    .action-buttons {
+        flex-wrap: wrap; /* Chống tràn bề ngang khi có nhiều nút */
+    }
+    
+    .cake { transform: scale(0.65) translateY(-20px); }
+    .wish-glass-panel { padding: 15px; width: 95%; }
+    #wish-text { font-size: 1.6rem; }
     
     /* Elegant minimized panel on mobile */
     .wish-glass-panel.minimized {
-        transform: translateY(0) scale(1);
-        position: absolute;
-        top: 20px;
-        left: 5%;
-        width: 90%;
+        animation: none;
+        position: fixed;
+        top: 0;
+        bottom: auto;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 95%;
         padding: 10px 15px;
         border-radius: 15px;
+        z-index: 999;
     }
     .wish-glass-panel.minimized #wish-text {
-        font-size: 1.2rem; /* Thu nhỏ text chữ lại */
+        font-size: 1.2rem;
         display: block;
     }
     .wish-glass-panel.minimized .action-buttons {
         margin-top: 10px;
-        min-height: auto;
     }
     .wish-glass-panel.minimized .glass-btn {
-        padding: 8px 20px;
-        font-size: 1rem;
+        padding: 8px 15px !important;
+        font-size: 0.95rem !important;
     }
     
     .polaroid { padding: 8px 8px 16px 8px; }
@@ -735,8 +780,19 @@ body.focus-mode #polaroid-container .polaroid:not(:hover) {
 }
 
 @media (min-width: 481px) and (max-width: 768px) {
-    .cake { transform: scale(0.85); }
+    /* V6 Fix: Tablet Layout */
+    .gift-box { width: 120px; height: 120px; }
+    .gift-body { width: 120px; height: 90px; }
+    .gift-lid { width: 140px; left: -10px; height: 35px; }
+    
+    .glass-btn {
+        padding: 12px 25px;
+        font-size: 1.1rem;
+    }
+    
+    .cake { transform: scale(0.8); }
     #wish-text { font-size: 2.2rem; }
+    
     .polaroid { padding: 10px 10px 20px 10px; }
     .polaroid-media { width: 110px; height: 130px; }
     .polaroid-caption { font-size: 1.2rem; padding-top: 10px; }
@@ -786,4 +842,104 @@ body.focus-mode #polaroid-container .polaroid:not(:hover) {
     0% { transform: translateY(0) scale(0.5); opacity: 0; }
     50% { opacity: 0.6; transform: translateY(-50px) scale(1.5); }
     100% { transform: translateY(-100px) scale(0.5); opacity: 0; }
+}
+
+/* ==========================================
+   V4: Cinematic Upgrade Styles
+   ========================================== */
+
+/* Gift Light Burst — ánh sáng tỏa ra từ hộp quà khi mở */
+.gift-light-burst {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 600px;
+    height: 600px;
+    margin-left: -300px;
+    margin-top: -300px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,215,0,0.8) 0%, rgba(255,180,0,0.3) 40%, rgba(255,107,107,0) 70%);
+    z-index: 5;
+    pointer-events: none;
+    opacity: 0;
+    transform: scale(0);
+    transition: transform 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                opacity 0.8s ease;
+}
+
+.gift-light-burst.active {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* Gift Particles — hạt sáng nổ tỏa ra khi mở quà */
+#gift-particles {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    z-index: 6;
+    pointer-events: none;
+}
+
+.gift-particle {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    box-shadow: 0 0 6px currentColor;
+    animation: giftParticleFly 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes giftParticleFly {
+    0% { transform: translateY(0) translateX(0) scale(1); opacity: 1; }
+    100% { transform: translateY(var(--fly-y)) translateX(var(--fly-x)) scale(0.2); opacity: 0; }
+}
+
+/* Screen Flash — hiệu ứng flash trắng khi chuyển scene */
+.screen-flash {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: white;
+    opacity: 0;
+    z-index: 999;
+    pointer-events: none;
+    transition: opacity 0.6s ease-out; /* Fade-out chậm: lộ dần scene mới */
+}
+
+.screen-flash.active {
+    opacity: 0.85; /* Sáng hơn để che kín scene swap */
+    transition: opacity 0.25s ease-in; /* Flash-in nhanh */
+}
+
+/* Flame Audio Feedback — ngọn lửa lung lay mạnh khi thổi nhẹ */
+.flame.flickering-hard {
+    animation: flickerHard 0.1s infinite alternate !important;
+}
+
+@keyframes flickerHard {
+    0% {
+        transform: translateX(-50%) scale(0.5) rotate(-10deg);
+        opacity: 0.6;
+        filter: brightness(0.8);
+    }
+    100% {
+        transform: translateX(-50%) scale(0.85) rotate(10deg);
+        opacity: 1;
+        filter: brightness(1.2);
+    }
+}
+
+/* Moment of Darkness — background tối hẳn trước khi pháo hoa nổ */
+.mesh-bg.dimmed {
+    filter: brightness(0.2);
+    transition: filter 1s ease;
+}
+
+.mesh-bg.undimming {
+    filter: brightness(1);
+    transition: filter 4s ease;
 }

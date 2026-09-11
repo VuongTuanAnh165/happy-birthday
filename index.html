@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Happy Birthday! 🎂✨</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎂</text></svg>">
+    
+    <!-- Preload critical assets -->
+    <link rel="preload" href="assets/audio/song.mp3" as="audio">
     
     <!-- Premium Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,6 +31,8 @@
         <div class="gift-container">
             <div class="spotlight"></div>
             <div class="dust-particles" id="dust-container"></div>
+            <div class="gift-light-burst"></div>
+            <div class="gift-particles" id="gift-particles"></div>
             
             <div class="gift-box" id="btn-open-gift">
                 <div class="gift-lid">
@@ -95,6 +101,9 @@
             </div>
         </div>
     </div>
+
+    <!-- Screen Flash Overlay -->
+    <div class="screen-flash" id="screen-flash"></div>
 
     <script src="main.js"></script>
 </body>
