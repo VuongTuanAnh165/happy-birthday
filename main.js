@@ -32,7 +32,14 @@ const LOCAL_ASSETS = [
     'assets/videos/10.mp4',
     'assets/videos/11.mp4',
     'assets/videos/12.mp4',
-    'assets/videos/13.mp4'
+    'assets/videos/13.mp4',
+    'assets/videos/14.mp4',
+    'assets/videos/15.mp4',
+    'assets/videos/16.mp4',
+    'assets/videos/17.mp4',
+    'assets/videos/18.mp4',
+    'assets/videos/19.mp4',
+    'assets/videos/20.mp4'
 ];
 
 const WISH_MESSAGE = "Sinh nhật hạnh phúc nha! ✨";
@@ -76,14 +83,38 @@ resizeCanvas();
 // PHASE 0: Preload Assets (chạy ngay từ đầu)
 // ==========================================
 function preloadAssets() {
+    const videoAssets = [];
+    
     LOCAL_ASSETS.forEach(src => {
         if (src.endsWith('.webp') || src.endsWith('.jpg') || src.endsWith('.png')) {
             const img = new Image();
             img.src = src;
+        } else if (src.endsWith('.mp4') || src.endsWith('.webm') || src.endsWith('.mov')) {
+            videoAssets.push(src);
         }
-        // Video: KHÔNG preload content ở đây, chỉ load khi cần (lazy)
     });
+
+    // Preload video ngầm tuần tự (sau khi trang đã render UI đầu) để không ảnh hưởng hiệu năng
+    if (videoAssets.length > 0) {
+        setTimeout(() => {
+            preloadVideosSequentially(videoAssets, 0);
+        }, 1500); // Đợi 1.5s để các animation khởi tạo đầu trang không bị giật
+    }
 }
+
+function preloadVideosSequentially(videos, index) {
+    if (index >= videos.length) return;
+    
+    fetch(videos[index], { cache: 'force-cache' })
+        .then(() => {
+            preloadVideosSequentially(videos, index + 1);
+        })
+        .catch(() => {
+            // Bỏ qua lỗi và tiếp tục load video khác
+            preloadVideosSequentially(videos, index + 1);
+        });
+}
+
 preloadAssets();
 
 // ==========================================
