@@ -39,7 +39,8 @@ const LOCAL_ASSETS = [
     'assets/videos/17.mp4',
     'assets/videos/18.mp4',
     'assets/videos/19.mp4',
-    'assets/videos/20.mp4'
+    'assets/videos/20.mp4',
+    'assets/videos/21.mp4'
 ];
 
 const WISH_MESSAGE = "Sinh nhật hạnh phúc nha! ✨";
