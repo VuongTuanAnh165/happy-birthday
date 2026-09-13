@@ -82,6 +82,8 @@ resizeCanvas();
 // ==========================================
 // PHASE 0: Preload Assets (chạy ngay từ đầu)
 // ==========================================
+const preloadedVideos = {};
+
 function preloadAssets() {
     const videoAssets = [];
     
@@ -105,14 +107,40 @@ function preloadAssets() {
 function preloadVideosSequentially(videos, index) {
     if (index >= videos.length) return;
     
-    fetch(videos[index], { cache: 'force-cache' })
-        .then(() => {
-            preloadVideosSequentially(videos, index + 1);
-        })
-        .catch(() => {
-            // Bỏ qua lỗi và tiếp tục load video khác
-            preloadVideosSequentially(videos, index + 1);
-        });
+    const src = videos[index];
+    
+    // Nhận diện iOS / Zalo
+    const ua = navigator.userAgent;
+    const isIOS = /iPad|iPhone|iPod/.test(ua);
+    const isInAppBrowser = /Zalo|FBAN|FBAV|Instagram|Line/i.test(ua);
+    const preventAutoPlay = isIOS && isInAppBrowser;
+    
+    const autoplayAttr = preventAutoPlay ? '' : 'autoplay';
+    
+    // Tạo thẻ video trong bộ nhớ ngầm để ép trình duyệt load trước khung hình
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = `<video src="${src}" class="polaroid-media" ${autoplayAttr} loop muted playsinline webkit-playsinline preload="auto"></video>`;
+    const mediaEl = tempDiv.firstElementChild;
+    
+    mediaEl.muted = true;
+    mediaEl.defaultMuted = true;
+    
+    preloadedVideos[src] = mediaEl;
+    mediaEl.load(); // Kích hoạt quá trình tải
+
+    let isNextCalled = false;
+    const next = () => {
+        if (isNextCalled) return;
+        isNextCalled = true;
+        preloadVideosSequentially(videos, index + 1);
+    };
+
+    // Khi load được khung hình đầu tiên hoặc metadata thì tiến hành load video kế tiếp
+    mediaEl.addEventListener('loadeddata', next, { once: true });
+    mediaEl.addEventListener('error', next, { once: true });
+    
+    // Fallback nếu mạng chậm (chỉ đợi tối đa 1.5s cho mỗi video để tránh kẹt)
+    setTimeout(next, 1500);
 }
 
 preloadAssets();
@@ -649,22 +677,26 @@ function generatePolaroids(startX, startY) {
         const isVideo = src !== 'placeholder' && (src.endsWith('.mp4') || src.endsWith('.webm') || src.endsWith('.mov'));
         
         if (isVideo) {
-            // Nhận diện Zalo / In-App browser trên iOS
-            const ua = navigator.userAgent;
-            const isIOS = /iPad|iPhone|iPod/.test(ua);
-            const isInAppBrowser = /Zalo|FBAN|FBAV|Instagram|Line/i.test(ua);
-            const preventAutoPlay = isIOS && isInAppBrowser;
-            
-            const autoplayAttr = preventAutoPlay ? '' : 'autoplay';
-            const preloadAttr = preventAutoPlay ? 'auto' : 'none'; // v4: lazy load video
+            // Sử dụng DOM element đã được tải ngầm (nếu có) để tránh màn hình đen
+            if (preloadedVideos[src]) {
+                mediaEl = preloadedVideos[src];
+            } else {
+                // Nhận diện Zalo / In-App browser trên iOS
+                const ua = navigator.userAgent;
+                const isIOS = /iPad|iPhone|iPod/.test(ua);
+                const isInAppBrowser = /Zalo|FBAN|FBAV|Instagram|Line/i.test(ua);
+                const preventAutoPlay = isIOS && isInAppBrowser;
+                
+                const autoplayAttr = preventAutoPlay ? '' : 'autoplay';
+                const preloadAttr = preventAutoPlay ? 'auto' : 'none';
 
-            // Thủ thuật cho iOS Safari: innerHTML để playsinline nhận diện đúng
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = `<video src="${src}" class="polaroid-media" ${autoplayAttr} loop muted playsinline webkit-playsinline preload="${preloadAttr}"></video>`;
-            mediaEl = tempDiv.firstElementChild;
-            
-            mediaEl.muted = true;
-            mediaEl.defaultMuted = true;
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = `<video src="${src}" class="polaroid-media" ${autoplayAttr} loop muted playsinline webkit-playsinline preload="${preloadAttr}"></video>`;
+                mediaEl = tempDiv.firstElementChild;
+                
+                mediaEl.muted = true;
+                mediaEl.defaultMuted = true;
+            }
         } else {
             mediaEl = document.createElement('img');
             mediaEl.src = src === 'placeholder' ? `https://picsum.photos/300/300?random=${Math.random()}` : src;
