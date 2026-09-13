@@ -649,6 +649,8 @@ function animateCanvas() {
 // ==========================================
 // Polaroid Zero-gravity Logic (v4: Stagger Entrance)
 // ==========================================
+let unshownAssets = [];
+
 function generatePolaroids(startX, startY) {
     const windowWidth = window.innerWidth;
     let maxItems;
@@ -663,9 +665,27 @@ function generatePolaroids(startX, startY) {
 
     const itemsToShow = [];
     if (LOCAL_ASSETS.length > 0) {
-        // Randomize (Xáo trộn)
-        const shuffled = [...LOCAL_ASSETS].sort(() => 0.5 - Math.random());
-        itemsToShow.push(...shuffled.slice(0, maxItems));
+        // Khởi tạo mảng unshown nếu nó trống
+        if (unshownAssets.length === 0) {
+            unshownAssets = [...LOCAL_ASSETS];
+        }
+
+        // Ưu tiên xáo trộn và lấy những ảnh chưa hiển thị
+        unshownAssets.sort(() => 0.5 - Math.random());
+        const taken = unshownAssets.splice(0, maxItems);
+        itemsToShow.push(...taken);
+
+        // Nếu kho ảnh chưa hiển thị đã cạn mà vẫn chưa đủ maxItems trên màn hình
+        if (itemsToShow.length < maxItems) {
+            const needed = maxItems - itemsToShow.length;
+            
+            // Làm mới lại kho ảnh, loại bỏ đi những ảnh vừa được chọn ở trên
+            unshownAssets = LOCAL_ASSETS.filter(src => !itemsToShow.includes(src));
+            unshownAssets.sort(() => 0.5 - Math.random());
+            
+            const extraTaken = unshownAssets.splice(0, needed);
+            itemsToShow.push(...extraTaken);
+        }
     } else {
         for(let i=0; i<maxItems; i++) itemsToShow.push('placeholder');
     }
