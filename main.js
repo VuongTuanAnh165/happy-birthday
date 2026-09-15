@@ -85,6 +85,7 @@ resizeCanvas();
 // ==========================================
 const preloadedVideos = {};
 
+let unshownAssets = [];
 let preparedBatch = [];
 
 function prepareNextBatch(maxItems) {
@@ -677,7 +678,6 @@ function animateCanvas() {
 // ==========================================
 // Polaroid Zero-gravity Logic (v4: Stagger Entrance)
 // ==========================================
-let unshownAssets = [];
 
 function generatePolaroids(startX, startY) {
     const windowWidth = window.innerWidth;
