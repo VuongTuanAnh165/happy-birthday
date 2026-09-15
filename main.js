@@ -110,17 +110,10 @@ function preloadVideosSequentially(videos, index) {
     
     const src = videos[index];
     
-    // Nhận diện iOS / Zalo
-    const ua = navigator.userAgent;
-    const isIOS = /iPad|iPhone|iPod/.test(ua);
-    const isInAppBrowser = /Zalo|FBAN|FBAV|Instagram|Line/i.test(ua);
-    const preventAutoPlay = isIOS && isInAppBrowser;
-    
-    const autoplayAttr = preventAutoPlay ? '' : 'autoplay';
-    
+    // Khi tải ngầm, tuyệt đối không dùng autoplay để tránh video tự chạy ẩn
     // Tạo thẻ video trong bộ nhớ ngầm để ép trình duyệt load trước khung hình
     const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = `<video src="${src}" class="polaroid-media" ${autoplayAttr} loop muted playsinline webkit-playsinline preload="auto"></video>`;
+    tempDiv.innerHTML = `<video src="${src}" class="polaroid-media" loop muted playsinline webkit-playsinline preload="auto"></video>`;
     const mediaEl = tempDiv.firstElementChild;
     
     mediaEl.muted = true;
@@ -701,11 +694,14 @@ function generatePolaroids(startX, startY) {
             // Sử dụng DOM element đã được tải ngầm (nếu có) để tránh màn hình đen
             if (preloadedVideos[src]) {
                 mediaEl = preloadedVideos[src];
+                mediaEl.setAttribute('autoplay', '');
+                // Gọi play() thủ công khi xuất hiện trên DOM
+                setTimeout(() => mediaEl.play().catch(e => console.log('Autoplay prevented', e)), 100);
             } else {
-                // Nhận diện Zalo / In-App browser trên iOS
+                // Nhận diện Zalo / In-App browser trên iOS (thêm TikTok, Bytedance)
                 const ua = navigator.userAgent;
                 const isIOS = /iPad|iPhone|iPod/.test(ua);
-                const isInAppBrowser = /Zalo|FBAN|FBAV|Instagram|Line/i.test(ua);
+                const isInAppBrowser = /Zalo|FBAN|FBAV|Instagram|Line|TikTok|Bytedance|trill|Musical_ly/i.test(ua);
                 const preventAutoPlay = isIOS && isInAppBrowser;
                 
                 const autoplayAttr = preventAutoPlay ? '' : 'autoplay';
@@ -717,6 +713,10 @@ function generatePolaroids(startX, startY) {
                 
                 mediaEl.muted = true;
                 mediaEl.defaultMuted = true;
+                
+                if (!preventAutoPlay) {
+                    setTimeout(() => mediaEl.play().catch(e => console.log('Autoplay prevented', e)), 100);
+                }
             }
         } else {
             mediaEl = document.createElement('img');
