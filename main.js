@@ -85,24 +85,56 @@ resizeCanvas();
 // ==========================================
 const preloadedVideos = {};
 
-function preloadAssets() {
+let preparedBatch = [];
+
+function prepareNextBatch(maxItems) {
+    if (unshownAssets.length === 0) {
+        unshownAssets = [...LOCAL_ASSETS];
+        unshownAssets.sort(() => 0.5 - Math.random());
+    }
+
+    if (unshownAssets.length >= maxItems) {
+        preparedBatch = unshownAssets.splice(0, maxItems);
+    } else {
+        const needed = maxItems - unshownAssets.length;
+        preparedBatch = unshownAssets.splice(0, unshownAssets.length);
+        
+        // Làm đầy lại kho ảnh
+        unshownAssets = LOCAL_ASSETS.filter(src => !preparedBatch.includes(src));
+        unshownAssets.sort(() => 0.5 - Math.random());
+        
+        preparedBatch.push(...unshownAssets.splice(0, needed));
+    }
+}
+
+function preloadPreparedBatch() {
     const videoAssets = [];
+    preparedBatch.forEach(src => {
+        if (src.endsWith('.mp4') || src.endsWith('.webm') || src.endsWith('.mov')) {
+            videoAssets.push(src); 
+        }
+    });
+    
+    if (videoAssets.length > 0) {
+        preloadVideosSequentially(videoAssets, 0);
+    }
+}
+
+function preloadAssets() {
+    let maxItems = window.innerWidth <= 480 ? 12 : (window.innerWidth <= 768 ? 16 : 24);
+    prepareNextBatch(maxItems); // Chuẩn bị mẻ ảnh đầu tiên ngay khi tải trang
     
     LOCAL_ASSETS.forEach(src => {
         if (src.endsWith('.webp') || src.endsWith('.jpg') || src.endsWith('.png')) {
             const img = new Image();
             img.src = src;
-        } else if (src.endsWith('.mp4') || src.endsWith('.webm') || src.endsWith('.mov')) {
-            videoAssets.push(src);
         }
     });
 
-    // Preload video ngầm tuần tự (sau khi trang đã render UI đầu) để không ảnh hưởng hiệu năng
-    if (videoAssets.length > 0) {
-        setTimeout(() => {
-            preloadVideosSequentially(videoAssets, 0);
-        }, 1500); // Đợi 1.5s để các animation khởi tạo đầu trang không bị giật
-    }
+    // Preload video ngầm tuần tự mẻ ĐẦU TIÊN (đợi UI render xong)
+    setTimeout(() => {
+        preloadPreparedBatch();
+    }, 1500);
 }
 
 function preloadVideosSequentially(videos, index) {
@@ -659,29 +691,21 @@ function generatePolaroids(startX, startY) {
         maxItems = Math.min(LOCAL_ASSETS.length, 24); // Desktop tối đa 24
     }
 
-    const itemsToShow = [];
+    let itemsToShow = [];
     if (LOCAL_ASSETS.length > 0) {
-        // Khởi tạo mảng unshown nếu nó trống
-        if (unshownAssets.length === 0) {
-            unshownAssets = [...LOCAL_ASSETS];
+        if (preparedBatch.length === 0) {
+            prepareNextBatch(maxItems); // Cứ phòng hờ nếu chưa có
         }
-
-        // Ưu tiên xáo trộn và lấy những ảnh chưa hiển thị
-        unshownAssets.sort(() => 0.5 - Math.random());
-        const taken = unshownAssets.splice(0, maxItems);
-        itemsToShow.push(...taken);
-
-        // Nếu kho ảnh chưa hiển thị đã cạn mà vẫn chưa đủ maxItems trên màn hình
-        if (itemsToShow.length < maxItems) {
-            const needed = maxItems - itemsToShow.length;
-            
-            // Làm mới lại kho ảnh, loại bỏ đi những ảnh vừa được chọn ở trên
-            unshownAssets = LOCAL_ASSETS.filter(src => !itemsToShow.includes(src));
-            unshownAssets.sort(() => 0.5 - Math.random());
-            
-            const extraTaken = unshownAssets.splice(0, needed);
-            itemsToShow.push(...extraTaken);
-        }
+        
+        itemsToShow = [...preparedBatch];
+        preparedBatch = []; // Xóa sau khi dùng
+        
+        // KÍCH HOẠT TẢI NGẦM MẺ TIẾP THEO ngay trong lúc người dùng đang xem mẻ này
+        setTimeout(() => {
+            prepareNextBatch(maxItems);
+            preloadPreparedBatch();
+        }, 1500); // Đợi 1.5s để mẻ hiện tại render mượt mà rồi mới tải
+        
     } else {
         for(let i=0; i<maxItems; i++) itemsToShow.push('placeholder');
     }
@@ -694,11 +718,15 @@ function generatePolaroids(startX, startY) {
         const isVideo = src !== 'placeholder' && (src.endsWith('.mp4') || src.endsWith('.webm') || src.endsWith('.mov'));
         
         if (isVideo) {
-            // Luôn tạo thẻ DOM mới để đảm bảo native autoplay inline hoạt động tốt nhất.
-            // Nhờ đã preload, video sẽ lấy thẳng từ cache mà không lo đen màn hình.
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = `<video src="${src}" class="polaroid-media" autoplay loop muted playsinline webkit-playsinline preload="auto"></video>`;
-            mediaEl = tempDiv.firstElementChild;
+            // Tái sử dụng thẻ DOM đã preload xong từ trước (nếu có) để TRÁNH HOÀN TOÀN việc load lại từ đầu gây đen xì
+            if (preloadedVideos[src]) {
+                mediaEl = preloadedVideos[src];
+                delete preloadedVideos[src]; // Chỉ dùng 1 lần
+            } else {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = `<video src="${src}" class="polaroid-media" preload="auto"></video>`;
+                mediaEl = tempDiv.firstElementChild;
+            }
             
             // Thiết lập các thuộc tính ép phát video ngay trong thẻ (Inline)
             mediaEl.muted = true;
@@ -840,7 +868,14 @@ function setupPolaroidInteraction(obj) {
         }
         
         if (videoEl) {
-            videoEl.muted = false;
+            const ua = navigator.userAgent;
+            const isInAppBrowser = /Zalo|FBAN|FBAV|Instagram|Line|TikTok|Bytedance|trill|Musical_ly/i.test(ua);
+            
+            // TRÊN CÁC TRÌNH DUYỆT IN-APP (TikTok, Zalo...): Tuyệt đối không unmute. Nếu unmute sẽ bị hệ điều hành ép bật fullscreen.
+            if (!isInAppBrowser) {
+                videoEl.muted = false;
+            }
+            
             bgMusic.pause();
             // Tránh gọi play() liên tục trên iOS
             if (videoEl.paused) {
