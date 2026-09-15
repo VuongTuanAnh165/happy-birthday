@@ -1,4 +1,84 @@
 // ==========================================
+// IN-APP BROWSER BLOCKER (Nâng cấp v5)
+// ==========================================
+(function() {
+    const UA = navigator.userAgent || navigator.vendor || window.opera;
+    const isMobile = /android|iphone|ipad|ipod/i.test(UA) || ('ontouchstart' in window && navigator.maxTouchPoints > 0);
+    
+    if (!isMobile) return;
+    if (/FBAN|FBAV|FB_IAB/i.test(UA)) return; // Messenger an toàn
+
+    const isUnsafe = /musical_ly|TikTok|BytedanceWebview|Zalo|Instagram|Snapchat|Line\//i.test(UA);
+    const isMainstreamBrowser = /Chrome\/|Safari\/|Firefox\/|SamsungBrowser\/|EdgA\//i.test(UA) && !/wv\)/.test(UA);
+    
+    if (isUnsafe || !isMainstreamBrowser) {
+        document.documentElement.innerHTML = `
+            <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <style>
+                    body {
+                        margin: 0; padding: 0; background: #000; color: #fff;
+                        font-family: 'Montserrat', sans-serif; height: 100vh;
+                        display: flex; flex-direction: column; align-items: center; justify-content: center;
+                    }
+                    .in-app-browser-overlay {
+                        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+                        background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+                        z-index: 99999; display: flex; flex-direction: column; justify-content: center; align-items: center;
+                        padding: 30px; text-align: center; color: #444; box-sizing: border-box;
+                    }
+                    .overlay-box {
+                        background: rgba(255, 255, 255, 1); padding: 30px; border-radius: 20px;
+                        box-shadow: 0 15px 35px rgba(255, 105, 135, 0.3); border: 1px solid rgba(255, 105, 135, 0.5);
+                        max-width: 400px; width: 100%;
+                    }
+                    h2 { color: #ff6b81; font-size: 2.2rem; margin-bottom: 15px; margin-top: 0; }
+                    p { font-size: 1.1rem; line-height: 1.5; margin-bottom: 20px; margin-top: 0; }
+                    .instruction { background: #fff0f3; padding: 15px; border-radius: 12px; font-size: 0.95rem; color: #ff4757; margin-bottom: 25px; font-weight: bold; line-height: 1.4;}
+                    button {
+                        background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); color: #333; border: none;
+                        padding: 15px; border-radius: 30px; font-size: 1.1rem; font-weight: bold; width: 100%;
+                        cursor: pointer; box-shadow: 0 8px 15px rgba(255, 154, 158, 0.3); display: flex; justify-content: center; align-items: center; gap: 10px;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="in-app-browser-overlay">
+                    <div class="overlay-box">
+                        <h2>Oops! ✨</h2>
+                        <p>Trình duyệt này chặn hiệu ứng 3D và âm thanh của thiệp.</p>
+                        <div class="instruction">
+                            👉 Nhấn vào dấu <b>...</b> ở góc phải màn hình<br>
+                            👉 Chọn <b>"Mở bằng trình duyệt"</b> (Open in Browser/Safari/Chrome) để trải nghiệm trọn vẹn nhé!
+                        </div>
+                        <button id="btnCopyLink">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            Copy Link Web
+                        </button>
+                    </div>
+                </div>
+            </body>
+        `;
+        
+        if (/android/i.test(UA)) {
+            const currentUrl = window.location.href;
+            window.location.href = `intent://${currentUrl.replace(/^https?:\/\//, '')}#Intent;scheme=https;package=com.android.chrome;end`;
+        }
+        
+        document.getElementById('btnCopyLink').addEventListener('click', (e) => {
+            navigator.clipboard.writeText(window.location.href).then(() => {
+                const btn = e.target.closest('button');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = `✅ Đã copy link!`;
+                setTimeout(() => btn.innerHTML = originalText, 2000);
+            }).catch(() => alert("Không thể copy, vui lòng thao tác thủ công!"));
+        });
+        
+        throw new Error("Execution halted: In-App browser detected.");
+    }
+})();
+
+// ==========================================
 // PLATFORM DETECTION HELPERS
 // ==========================================
 const UA = navigator.userAgent;

@@ -1021,3 +1021,85 @@ video.polaroid-media::-moz-media-controls {
     filter: brightness(1);
     transition: filter 4s ease;
 }
+
+/* ========================================= */
+/* IN-APP BROWSER OVERLAY */
+/* ========================================= */
+.in-app-browser-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 30px;
+    text-align: center;
+    font-family: 'Montserrat', sans-serif;
+    color: #444;
+}
+
+.in-app-browser-overlay .overlay-box {
+    background: rgba(255, 255, 255, 0.9);
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 15px 35px rgba(255, 105, 135, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    max-width: 400px;
+    animation: floatUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.in-app-browser-overlay h2 {
+    font-family: 'Great Vibes', cursive;
+    color: #ff6b81;
+    font-size: 2.5rem;
+    margin-bottom: 15px;
+    text-shadow: 0 2px 4px rgba(255, 107, 129, 0.2);
+}
+
+.in-app-browser-overlay p {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+.in-app-browser-overlay .instruction {
+    background: #fff0f3;
+    padding: 15px;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    color: #ff4757;
+    margin-bottom: 25px;
+    font-weight: 500;
+}
+
+.in-app-browser-overlay button {
+    background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+    color: #333;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 30px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    box-shadow: 0 8px 15px rgba(255, 154, 158, 0.3);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+}
+
+.in-app-browser-overlay button:active {
+    transform: scale(0.95);
+}
+
+@keyframes floatUp {
+    0% { transform: translateY(30px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+}
