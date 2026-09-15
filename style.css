@@ -714,7 +714,6 @@ body.focus-mode #polaroid-container .polaroid:not(:hover):not(.active) {
     box-shadow: inset 0 0 10px rgba(0,0,0,0.4);
     /* Vintage Filter */
     filter: sepia(0.2) contrast(1.1) saturate(1.1);
-    pointer-events: none; /* Ngăn trình phát video gốc bắt click gây fullscreen */
 }
 
 .polaroid .glare {

@@ -730,11 +730,13 @@ function generatePolaroids(startX, startY) {
             tempDiv.innerHTML = `<video src="${src}" class="polaroid-media" autoplay loop muted playsinline webkit-playsinline></video>`;
             mediaEl = tempDiv.firstElementChild;
             
-            // Đảm bảo set cứng property bằng JS
+            // Đảm bảo set cứng property bằng JS (Cực kỳ quan trọng để iOS Webview không bỏ sót)
             mediaEl.muted = true;
             mediaEl.defaultMuted = true;
             mediaEl.playsInline = true;
             mediaEl.autoplay = true;
+            mediaEl.setAttribute('playsinline', '');
+            mediaEl.setAttribute('webkit-playsinline', '');
             
             // TUYỆT ĐỐI KHÔNG DÙNG lệnh mediaEl.play() ở đây!
             // Trên TikTok / Android Webview, việc dùng JS ép play() mà không thông qua thao tác click trực tiếp của người dùng sẽ kích hoạt trình phát Fullscreen mặc định của máy.
