@@ -772,10 +772,21 @@ function generatePolaroids(startX, startY) {
         
         // Stagger entrance — mỗi tấm xuất hiện cách nhau 100ms
         setTimeout(() => {
-            // TUYỆT ĐỐI KHÔNG ẨN OPACITY: 0
-            // Nếu ẩn, Chrome/Safari sẽ từ chối kích hoạt Autoplay Native của thẻ Video.
             polaroidContainer.appendChild(polaroid);
             polaroid.style.pointerEvents = 'none';
+            
+            // SỬA LỖI PC: Trình duyệt Chrome/PC từ chối Autoplay tự nhiên khi thẻ video được insert trễ (qua setTimeout).
+            // Do đó, BẮT BUỘC phải gọi lệnh .play() bằng Javascript ngay sau khi gắn vào DOM.
+            const vid = polaroid.querySelector('video');
+            if (vid) {
+                const isTikTok = /TikTok|Bytedance|trill|Musical_ly|ByteLocale/i.test(navigator.userAgent);
+                // Ngoại trừ TikTok (vì TikTok dính bug gọi JS play() tự động là ép Fullscreen), tất cả trình duyệt khác đều ép play()
+                if (!isTikTok) {
+                    setTimeout(() => {
+                        vid.play().catch(e => console.log('PC Autoplay prevented', e));
+                    }, 50);
+                }
+            }
             
             // Bật tương tác sau khi bung ra 1 khoảng
             setTimeout(() => {
@@ -860,16 +871,15 @@ function setupPolaroidInteraction(obj) {
         }
         
         if (videoEl) {
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const isTikTok = /TikTok|Bytedance|trill|Musical_ly|ByteLocale/i.test(navigator.userAgent);
             
-            // CHỐT CHẶN CUỐI CÙNG CHO TIKTOK/MOBILE: Tuyệt đối không bật tiếng (unmute) trên điện thoại.
-            // Hệ điều hành di động (đặc biệt iOS Webview) sẽ viện cớ unmute để cướp quyền phát và ép bung Fullscreen.
-            if (!isMobile) {
+            // CHỈ CẤM TIKTOK: TikTok quản lý video cực kỳ bảo thủ, hễ unmute là ép bật Fullscreen.
+            // Các app khác như Messenger, Safari, Chrome PC vẫn cho phép unmute bình thường.
+            if (!isTikTok) {
                 videoEl.muted = false;
-                bgMusic.pause(); // Chỉ tắt nhạc nền nếu video bật được tiếng
+                bgMusic.pause(); 
             }
             
-            // Nếu autoplay native bị block (ví dụ: chế độ tiết kiệm pin), lúc này mới dùng JS ép play
             if (videoEl.paused) {
                 videoEl.play().catch(e => console.log('Video play prevented', e));
             }
