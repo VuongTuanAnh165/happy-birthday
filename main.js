@@ -718,26 +718,23 @@ function generatePolaroids(startX, startY) {
         const isVideo = src !== 'placeholder' && (src.endsWith('.mp4') || src.endsWith('.webm') || src.endsWith('.mov'));
         
         if (isVideo) {
-            // Tái sử dụng thẻ DOM đã preload xong từ trước (nếu có) để TRÁNH HOÀN TOÀN việc load lại từ đầu gây đen xì
+            // LUÔN TẠO THẺ MỚI với autoplay trực tiếp trong HTML.
+            // Giải phóng bộ nhớ của thẻ tải ngầm (nếu có) vì trình duyệt PC/Chrome không nhận diện autoplay trên thẻ cũ (tái sử dụng).
+            // Data video đã nằm sẵn trong cache nhờ preloadVideosSequentially nên thẻ mới này sẽ load tức thì, không bị đen.
             if (preloadedVideos[src]) {
-                mediaEl = preloadedVideos[src];
-                delete preloadedVideos[src]; // Chỉ dùng 1 lần
-            } else {
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = `<video src="${src}" class="polaroid-media" preload="auto"></video>`;
-                mediaEl = tempDiv.firstElementChild;
+                preloadedVideos[src].src = '';
+                delete preloadedVideos[src]; 
             }
             
-            // Thiết lập các thuộc tính ép phát video ngay trong thẻ (Inline)
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = `<video src="${src}" class="polaroid-media" autoplay loop muted playsinline webkit-playsinline></video>`;
+            mediaEl = tempDiv.firstElementChild;
+            
+            // Đảm bảo set cứng property bằng JS
             mediaEl.muted = true;
             mediaEl.defaultMuted = true;
             mediaEl.playsInline = true;
-            mediaEl.setAttribute('playsinline', '');
-            mediaEl.setAttribute('webkit-playsinline', '');
-            
-            // Giao quyền Autoplay cho trình duyệt xử lý tự nhiên khi element được thêm vào DOM
             mediaEl.autoplay = true;
-            mediaEl.setAttribute('autoplay', 'autoplay');
             
             // TUYỆT ĐỐI KHÔNG DÙNG lệnh mediaEl.play() ở đây!
             // Trên TikTok / Android Webview, việc dùng JS ép play() mà không thông qua thao tác click trực tiếp của người dùng sẽ kích hoạt trình phát Fullscreen mặc định của máy.
