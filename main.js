@@ -118,6 +118,9 @@ function preloadVideosSequentially(videos, index) {
     
     mediaEl.muted = true;
     mediaEl.defaultMuted = true;
+    mediaEl.playsInline = true;
+    mediaEl.setAttribute('playsinline', '');
+    mediaEl.setAttribute('webkit-playsinline', '');
     
     preloadedVideos[src] = mediaEl;
     mediaEl.load(); // Kích hoạt quá trình tải
@@ -694,9 +697,20 @@ function generatePolaroids(startX, startY) {
             // Sử dụng DOM element đã được tải ngầm (nếu có) để tránh màn hình đen
             if (preloadedVideos[src]) {
                 mediaEl = preloadedVideos[src];
-                mediaEl.setAttribute('autoplay', '');
-                // Gọi play() thủ công khi xuất hiện trên DOM
-                setTimeout(() => mediaEl.play().catch(e => console.log('Autoplay prevented', e)), 100);
+                mediaEl.playsInline = true;
+                mediaEl.setAttribute('playsinline', '');
+                mediaEl.setAttribute('webkit-playsinline', '');
+                
+                const ua = navigator.userAgent;
+                const isIOS = /iPad|iPhone|iPod/.test(ua);
+                const isInAppBrowser = /Zalo|FBAN|FBAV|Instagram|Line|TikTok|Bytedance|trill|Musical_ly/i.test(ua);
+                const preventAutoPlay = isIOS && isInAppBrowser;
+                
+                if (!preventAutoPlay) {
+                    mediaEl.setAttribute('autoplay', '');
+                    // Gọi play() thủ công khi xuất hiện trên DOM
+                    setTimeout(() => mediaEl.play().catch(e => console.log('Autoplay prevented', e)), 100);
+                }
             } else {
                 // Nhận diện Zalo / In-App browser trên iOS (thêm TikTok, Bytedance)
                 const ua = navigator.userAgent;
@@ -713,6 +727,9 @@ function generatePolaroids(startX, startY) {
                 
                 mediaEl.muted = true;
                 mediaEl.defaultMuted = true;
+                mediaEl.playsInline = true;
+                mediaEl.setAttribute('playsinline', '');
+                mediaEl.setAttribute('webkit-playsinline', '');
                 
                 if (!preventAutoPlay) {
                     setTimeout(() => mediaEl.play().catch(e => console.log('Autoplay prevented', e)), 100);
