@@ -751,10 +751,7 @@ function generatePolaroids(startX, startY) {
         polaroid.appendChild(mediaEl);
         polaroid.appendChild(caption);
         
-        // v4: Stagger entrance — ẩn ban đầu
-        polaroid.style.opacity = '0';
-
-        // Vật lý Zero-gravity: Bắn dạng tỏa tròn (explosion)
+        // Bắn dạng tỏa tròn (explosion)
         const angle = Math.random() * Math.PI * 2;
         const speed = Math.random() * 10 + 5;
         const obj = {
@@ -762,29 +759,27 @@ function generatePolaroids(startX, startY) {
             x: startX,
             y: startY,
             vx: Math.cos(angle) * speed,
-            vy: Math.sin(angle) * speed - 5, // Hướng lên trên một chút
+            vy: Math.sin(angle) * speed - 5, 
             rotation: Math.random() * 360,
             rotSpeed: (Math.random() - 0.5) * 0.8,
             isHovered: false
         };
         
+        // Khởi tạo thẻ lập tức ở đúng vị trí tâm
+        polaroid.style.transform = `translate3d(${startX}px, ${startY}px, 0) rotate(0deg)`;
+        
         activePolaroids.push(obj);
         
-        // v4: Stagger entrance — mỗi tấm xuất hiện cách nhau 100ms
+        // Stagger entrance — mỗi tấm xuất hiện cách nhau 100ms
         setTimeout(() => {
+            // TUYỆT ĐỐI KHÔNG ẨN OPACITY: 0
+            // Nếu ẩn, Chrome/Safari sẽ từ chối kích hoạt Autoplay Native của thẻ Video.
             polaroidContainer.appendChild(polaroid);
             polaroid.style.pointerEvents = 'none';
             
-            // Fade in mượt mà
-            requestAnimationFrame(() => {
-                polaroid.style.transition = 'opacity 0.5s ease';
-                polaroid.style.opacity = '1';
-            });
-            
-            // Bật tương tác sau khi fade in xong
+            // Bật tương tác sau khi bung ra 1 khoảng
             setTimeout(() => {
                 polaroid.style.pointerEvents = 'auto';
-                polaroid.style.transition = '';
             }, 600);
             
             setupPolaroidInteraction(obj);
@@ -865,16 +860,16 @@ function setupPolaroidInteraction(obj) {
         }
         
         if (videoEl) {
-            const ua = navigator.userAgent;
-            const isInAppBrowser = /Zalo|FBAN|FBAV|Instagram|Line|TikTok|Bytedance|trill|Musical_ly/i.test(ua);
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             
-            // TRÊN CÁC TRÌNH DUYỆT IN-APP (TikTok, Zalo...): Tuyệt đối không unmute. Nếu unmute sẽ bị hệ điều hành ép bật fullscreen.
-            if (!isInAppBrowser) {
+            // CHỐT CHẶN CUỐI CÙNG CHO TIKTOK/MOBILE: Tuyệt đối không bật tiếng (unmute) trên điện thoại.
+            // Hệ điều hành di động (đặc biệt iOS Webview) sẽ viện cớ unmute để cướp quyền phát và ép bung Fullscreen.
+            if (!isMobile) {
                 videoEl.muted = false;
+                bgMusic.pause(); // Chỉ tắt nhạc nền nếu video bật được tiếng
             }
             
-            bgMusic.pause();
-            // Tránh gọi play() liên tục trên iOS
+            // Nếu autoplay native bị block (ví dụ: chế độ tiết kiệm pin), lúc này mới dùng JS ép play
             if (videoEl.paused) {
                 videoEl.play().catch(e => console.log('Video play prevented', e));
             }
