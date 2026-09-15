@@ -779,9 +779,15 @@ function generatePolaroids(startX, startY) {
             // Do đó, BẮT BUỘC phải gọi lệnh .play() bằng Javascript ngay sau khi gắn vào DOM.
             const vid = polaroid.querySelector('video');
             if (vid) {
-                const isTikTok = /TikTok|Bytedance|trill|Musical_ly|ByteLocale/i.test(navigator.userAgent);
-                // Ngoại trừ TikTok (vì TikTok dính bug gọi JS play() tự động là ép Fullscreen), tất cả trình duyệt khác đều ép play()
-                if (!isTikTok) {
+                const ua = navigator.userAgent;
+                const isIOS = /iPhone|iPad|iPod/i.test(ua);
+                const isSafari = /Safari/i.test(ua);
+                const isFB = /FBAN|FBAV/i.test(ua); 
+                const isHiddenIOSWebView = isIOS && !isSafari && !isFB;
+                const isStrictWebView = /TikTok|Bytedance|trill|Musical_ly|ByteLocale|aweme|Zalo/i.test(ua);
+                const isDangerousAutoplay = isHiddenIOSWebView || isStrictWebView;
+
+                if (!isDangerousAutoplay) {
                     setTimeout(() => {
                         vid.play().catch(e => console.log('PC Autoplay prevented', e));
                     }, 50);
@@ -871,11 +877,19 @@ function setupPolaroidInteraction(obj) {
         }
         
         if (videoEl) {
-            const isTikTok = /TikTok|Bytedance|trill|Musical_ly|ByteLocale/i.test(navigator.userAgent);
+            const ua = navigator.userAgent;
+            const isIOS = /iPhone|iPad|iPod/i.test(ua);
+            const isSafari = /Safari/i.test(ua);
+            const isFB = /FBAN|FBAV/i.test(ua); 
             
-            // CHỈ CẤM TIKTOK: TikTok quản lý video cực kỳ bảo thủ, hễ unmute là ép bật Fullscreen.
-            // Các app khác như Messenger, Safari, Chrome PC vẫn cho phép unmute bình thường.
-            if (!isTikTok) {
+            // TikTok trên iOS thường giấu tên, chỉ để lộ danh tính là một WebView ẩn danh (Không có chữ Safari).
+            const isHiddenIOSWebView = isIOS && !isSafari && !isFB;
+            const isStrictWebView = /TikTok|Bytedance|trill|Musical_ly|ByteLocale|aweme|Zalo/i.test(ua);
+            
+            // Chốt chặn TỐI THƯỢNG: Nếu là TikTok/Zalo hoặc WebView ẩn danh trên iOS thì TUYỆT ĐỐI không bật tiếng.
+            const shouldMuteForcefully = isHiddenIOSWebView || isStrictWebView;
+            
+            if (!shouldMuteForcefully) {
                 videoEl.muted = false;
                 bgMusic.pause(); 
             }
