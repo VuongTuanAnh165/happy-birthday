@@ -694,14 +694,11 @@ function generatePolaroids(startX, startY) {
         const isVideo = src !== 'placeholder' && (src.endsWith('.mp4') || src.endsWith('.webm') || src.endsWith('.mov'));
         
         if (isVideo) {
-            // Sử dụng DOM element đã được tải ngầm (nếu có)
-            if (preloadedVideos[src]) {
-                mediaEl = preloadedVideos[src];
-            } else {
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = `<video src="${src}" class="polaroid-media" loop muted playsinline webkit-playsinline preload="auto"></video>`;
-                mediaEl = tempDiv.firstElementChild;
-            }
+            // Luôn tạo thẻ DOM mới để đảm bảo native autoplay inline hoạt động tốt nhất.
+            // Nhờ đã preload, video sẽ lấy thẳng từ cache mà không lo đen màn hình.
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = `<video src="${src}" class="polaroid-media" autoplay loop muted playsinline webkit-playsinline preload="auto"></video>`;
+            mediaEl = tempDiv.firstElementChild;
             
             // Thiết lập các thuộc tính ép phát video ngay trong thẻ (Inline)
             mediaEl.muted = true;
@@ -900,15 +897,14 @@ function setupPolaroidInteraction(obj) {
     obj.unhover = handleUnhover;
 
     if (window.innerWidth <= 768) {
-        // v4 MOBILE: Touch toggle (tap = zoom, tap lại = thu nhỏ)
-        obj.el.addEventListener('touchstart', (e) => {
-            e.preventDefault();
+        // v4 MOBILE: Dùng 'click' thay vì 'touchstart' để WebView công nhận là thao tác người dùng hợp lệ, cho phép bật tiếng inline
+        obj.el.addEventListener('click', (e) => {
             if (obj.isHovered) {
                 handleUnhover();
             } else {
                 handleHover();
             }
-        }, { passive: false });
+        });
     } else {
         // DESKTOP: Mouse hover
         obj.el.addEventListener('mouseenter', handleHover);
