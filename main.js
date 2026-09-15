@@ -45,6 +45,7 @@ function createSafeVideoElement(src, options = {}) {
     video.className = 'polaroid-media';
     video.loop = true;
     video.preload = 'auto';
+    video.controls = false; // TUYỆT ĐỐI không hiển thị native controls
     
     // === CHỐNG FULLSCREEN: Set cả attribute LẪN property ===
     video.muted = true;
@@ -58,14 +59,39 @@ function createSafeVideoElement(src, options = {}) {
     video.setAttribute('x-webkit-airplay', 'deny');
     video.setAttribute('disablePictureInPicture', '');
     video.setAttribute('disableRemotePlayback', '');
+    video.removeAttribute('controls'); // Xóa controls nếu có
     
-    // Autoplay: CHỈ set khi platform cho phép
-    if (options.autoplay) {
+    // Autoplay: LUÔN bật — video sẽ tự chạy muted inline
+    if (options.autoplay !== false) {
         video.autoplay = true;
         video.setAttribute('autoplay', '');
     }
     
     return video;
+}
+
+/**
+ * Chặn mọi nỗ lực fullscreen từ video trên in-app browser.
+ * Lắng nghe fullscreen events và thoát ngay lập tức.
+ */
+function setupFullscreenBlocker() {
+    // Standard Fullscreen API
+    document.addEventListener('fullscreenchange', () => {
+        if (document.fullscreenElement && document.fullscreenElement.tagName === 'VIDEO') {
+            document.exitFullscreen().catch(() => {});
+        }
+    });
+    // WebKit (iOS Safari / WebView)
+    document.addEventListener('webkitfullscreenchange', () => {
+        if (document.webkitFullscreenElement && document.webkitFullscreenElement.tagName === 'VIDEO') {
+            document.webkitExitFullscreen();
+        }
+    });
+}
+
+// Kích hoạt fullscreen blocker trên unsafe in-app browsers
+if (isUnsafeInAppBrowser()) {
+    setupFullscreenBlocker();
 }
 
 // ==========================================
@@ -802,12 +828,8 @@ function generatePolaroids(startX, startY) {
         for(let i=0; i<maxItems; i++) itemsToShow.push('placeholder');
     }
 
-    // Xác định strategy autoplay theo platform (một lần duy nhất)
+    // LUÔN autoplay trên MỌI platform — video chạy muted inline
     const mobile = isMobileDevice();
-    const unsafeApp = isUnsafeInAppBrowser();
-    // PC hoặc Messenger: cho phép autoplay
-    // TikTok/Zalo/Instagram: KHÔNG autoplay
-    const allowAutoplay = !unsafeApp;
 
     itemsToShow.forEach((src, index) => {
         const polaroid = document.createElement('div');
@@ -826,8 +848,8 @@ function generatePolaroids(startX, startY) {
                 delete preloadedVideos[src]; 
             }
             
-            // Tạo video element mới bằng helper an toàn
-            mediaEl = createSafeVideoElement(src, { autoplay: allowAutoplay });
+            // Tạo video element mới bằng helper an toàn — LUÔN autoplay
+            mediaEl = createSafeVideoElement(src, { autoplay: true });
         } else {
             mediaEl = document.createElement('img');
             mediaEl.src = src === 'placeholder' ? `https://picsum.photos/300/300?random=${Math.random()}` : src;
@@ -839,6 +861,16 @@ function generatePolaroids(startX, startY) {
         caption.innerText = POLAROID_CAPTIONS[Math.floor(Math.random() * POLAROID_CAPTIONS.length)];
 
         polaroid.appendChild(mediaEl);
+        
+        // TOUCH SHIELD: Tấm chắn vô hình đè lên video, chặn mọi touch/click
+        // trực tiếp lên native video controls. Click sẽ bubble lên .polaroid
+        // để trigger handleHover/handleUnhover an toàn.
+        if (isVideo) {
+            const shield = document.createElement('div');
+            shield.className = 'video-touch-shield';
+            polaroid.appendChild(shield);
+        }
+        
         polaroid.appendChild(caption);
         
         // Bắn dạng tỏa tròn (explosion)
@@ -865,22 +897,28 @@ function generatePolaroids(startX, startY) {
             polaroidContainer.appendChild(polaroid);
             polaroid.style.pointerEvents = 'none';
             
-            // Autoplay logic sau khi gắn vào DOM
+            // Kích hoạt play sau khi gắn vào DOM
             const vid = polaroid.querySelector('video');
             if (vid) {
+                // Chặn fullscreen trên từng video cụ thể (iOS WebView)
+                vid.addEventListener('webkitbeginfullscreen', (e) => {
+                    e.preventDefault();
+                    try { vid.webkitExitFullscreen(); } catch(err) {}
+                });
+                vid.addEventListener('webkitpresentationmodechanged', (e) => {
+                    if (vid.webkitPresentationMode === 'fullscreen') {
+                        try { vid.webkitSetPresentationMode('inline'); } catch(err) {}
+                    }
+                });
+                
+                // PC: BẮT BUỘC gọi .play() vì Chrome PC từ chối autoplay khi insert trễ qua setTimeout
                 if (!mobile) {
-                    // PC: BẮT BUỘC gọi .play() vì Chrome PC từ chối autoplay khi insert trễ qua setTimeout
                     setTimeout(() => {
                         vid.play().catch(e => console.log('PC Autoplay prevented', e));
                     }, 50);
-                } else if (allowAutoplay) {
-                    // Mobile an toàn (Messenger): Autoplay attribute đã được set, KHÔNG gọi .play()
-                    // Trình duyệt sẽ tự play nhờ attribute autoplay
-                } else {
-                    // Mobile KHÔNG an toàn (TikTok/Zalo/Instagram):
-                    // KHÔNG autoplay, KHÔNG gọi .play(). Video sẽ hiển thị frame đầu.
-                    // User tap vào thẻ → play inline (xử lý trong setupPolaroidInteraction)
                 }
+                // Mobile: ĐỂ AUTOPLAY ATTRIBUTE xử lý. KHÔNG gọi .play().
+                // Nếu autoplay bị chặn, video sẽ hiển thị frame đầu nhờ preload="auto".
             }
             
             // Bật tương tác sau khi bung ra 1 khoảng
@@ -941,7 +979,6 @@ function animateZeroGravity() {
 function setupPolaroidInteraction(obj) {
     const videoEl = obj.el.querySelector('video');
     const mobile = isMobileDevice();
-    const unsafeApp = isUnsafeInAppBrowser();
 
     const handleHover = () => {
         // Tối ưu Touch: Khi click/hover vào một ảnh, tự động unhover các ảnh khác
@@ -953,7 +990,7 @@ function setupPolaroidInteraction(obj) {
 
         obj.isHovered = true;
         obj.el.style.zIndex = "100";
-        obj.el.classList.add('active'); // V6 Fix: Thêm class active cho mobile touch
+        obj.el.classList.add('active');
         
         // Focus mode: làm mờ background
         document.body.classList.add('focus-mode');
@@ -974,26 +1011,13 @@ function setupPolaroidInteraction(obj) {
         }
         
         if (videoEl) {
-            // Xác định có an toàn để bật tiếng + play hay không
-            const isSafeToUnmute = !mobile || isSafeInAppBrowser();
+            // BẬT TIẾNG + TẮT NHẠC NỀN trên MỌI nền tảng khi hover/tap
+            videoEl.muted = false;
+            bgMusic.pause();
             
-            if (isSafeToUnmute) {
-                // PC hoặc Messenger: Bật tiếng, tắt nhạc nền
-                videoEl.muted = false;
-                bgMusic.pause();
-                
-                // PC: Ép play nếu đang pause
-                if (!mobile && videoEl.paused) {
-                    videoEl.play().catch(e => console.log('Video play prevented', e));
-                }
-            } else if (unsafeApp) {
-                // TikTok/Zalo/Instagram: Tap của user = user gesture hợp lệ
-                // → An toàn để play inline VÀ bật tiếng vì đây là thao tác trực tiếp
-                videoEl.muted = false;
-                bgMusic.pause();
-                if (videoEl.paused) {
-                    videoEl.play().catch(e => console.log('InApp video play prevented', e));
-                }
+            // Nếu video đang pause (autoplay bị chặn), ép play bằng user gesture
+            if (videoEl.paused) {
+                videoEl.play().catch(e => console.log('Video play prevented', e));
             }
         }
     };
@@ -1001,9 +1025,9 @@ function setupPolaroidInteraction(obj) {
     const handleUnhover = () => {
         obj.isHovered = false;
         obj.el.style.zIndex = "10";
-        obj.el.classList.remove('active'); // V6 Fix
-        obj.el.style.boxShadow = ""; // Phục hồi shadow ban đầu
-        obj.el.style.transform = `translate3d(${obj.x}px, ${obj.y}px, 0) rotate(${obj.rotation}deg)`; // Phục hồi rotation
+        obj.el.classList.remove('active');
+        obj.el.style.boxShadow = "";
+        obj.el.style.transform = `translate3d(${obj.x}px, ${obj.y}px, 0) rotate(${obj.rotation}deg)`;
         
         // Tắt focus mode
         if (activePolaroids.every(p => !p.isHovered)) {
@@ -1014,13 +1038,9 @@ function setupPolaroidInteraction(obj) {
         obj.el.querySelector('.glare')?.remove();
 
         if (videoEl) {
+            // TẮT TIẾNG + BẬT LẠI NHẠC NỀN — video vẫn tiếp tục chạy muted
             videoEl.muted = true;
             bgMusic.play().catch(e => console.log("Audio play prevented", e));
-            
-            // Trên unsafe in-app browser: pause video khi unhover (vì không có autoplay)
-            if (unsafeApp) {
-                videoEl.pause();
-            }
         }
     };
 
@@ -1031,7 +1051,7 @@ function setupPolaroidInteraction(obj) {
         const centerX = rect.width / 2;
         const centerY = rect.height / 2;
         
-        const tiltX = (y - centerY) / centerY * 15; // Cường độ tilt (độ)
+        const tiltX = (y - centerY) / centerY * 15;
         const tiltY = (centerX - x) / centerX * 15;
         
         const scaleHover = 2.8;
@@ -1051,7 +1071,7 @@ function setupPolaroidInteraction(obj) {
     obj.unhover = handleUnhover;
 
     if (window.innerWidth <= 768) {
-        // v4 MOBILE: Dùng 'click' thay vì 'touchstart' để WebView công nhận là thao tác người dùng hợp lệ, cho phép bật tiếng inline
+        // MOBILE: Dùng 'click' — WebView công nhận là user gesture hợp lệ
         obj.el.addEventListener('click', (e) => {
             if (obj.isHovered) {
                 handleUnhover();

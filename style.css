@@ -717,11 +717,67 @@ body.focus-mode #polaroid-container .polaroid:not(:hover):not(.active) {
     filter: sepia(0.2) contrast(1.1) saturate(1.1);
 }
 
-/* Video Anti-Fullscreen: Ép video render inline trên mọi in-app browser */
+/* Video Anti-Fullscreen: Ép video render inline + ẨN TOÀN BỘ native controls */
 video.polaroid-media {
     max-width: 100%;
     max-height: 100%;
-    pointer-events: none; /* Ngăn trình duyệt mobile hijack tap trên video → play fullscreen */
+    pointer-events: none; /* Lớp 1: Ngăn tap trực tiếp vào video */
+}
+
+/* Lớp 2: Ẩn native controls bằng CSS pseudo-element selectors */
+video.polaroid-media::-webkit-media-controls {
+    display: none !important;
+    -webkit-appearance: none;
+}
+video.polaroid-media::-webkit-media-controls-panel {
+    display: none !important;
+}
+video.polaroid-media::-webkit-media-controls-play-button {
+    display: none !important;
+}
+video.polaroid-media::-webkit-media-controls-start-playback-button {
+    display: none !important;
+    -webkit-appearance: none;
+}
+video.polaroid-media::-webkit-media-controls-overlay-play-button {
+    display: none !important;
+}
+video.polaroid-media::-webkit-media-controls-fullscreen-button {
+    display: none !important;
+}
+video.polaroid-media::-webkit-media-controls-timeline {
+    display: none !important;
+}
+video.polaroid-media::-webkit-media-controls-current-time-display {
+    display: none !important;
+}
+video.polaroid-media::-webkit-media-controls-time-remaining-display {
+    display: none !important;
+}
+video.polaroid-media::-webkit-media-controls-volume-slider {
+    display: none !important;
+}
+video.polaroid-media::-webkit-media-controls-enclosure {
+    display: none !important;
+}
+/* Firefox */
+video.polaroid-media::-moz-media-controls {
+    display: none !important;
+}
+
+/* Lớp 3: Touch Shield — tấm chắn vô hình đè lên video */
+/* Chặn mọi tap/touch chạm vào native controls bên dưới.
+   Click sẽ bubble lên .polaroid để trigger hover/zoom bình thường. */
+.video-touch-shield {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 3;
+    background: transparent;
+    -webkit-tap-highlight-color: transparent;
+    cursor: grab;
 }
 
 .polaroid .glare {
