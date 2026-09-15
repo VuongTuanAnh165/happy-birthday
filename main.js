@@ -694,47 +694,28 @@ function generatePolaroids(startX, startY) {
         const isVideo = src !== 'placeholder' && (src.endsWith('.mp4') || src.endsWith('.webm') || src.endsWith('.mov'));
         
         if (isVideo) {
-            // Sử dụng DOM element đã được tải ngầm (nếu có) để tránh màn hình đen
+            // Sử dụng DOM element đã được tải ngầm (nếu có)
             if (preloadedVideos[src]) {
                 mediaEl = preloadedVideos[src];
-                mediaEl.playsInline = true;
-                mediaEl.setAttribute('playsinline', '');
-                mediaEl.setAttribute('webkit-playsinline', '');
-                
-                const ua = navigator.userAgent;
-                const isIOS = /iPad|iPhone|iPod/.test(ua);
-                const isInAppBrowser = /Zalo|FBAN|FBAV|Instagram|Line|TikTok|Bytedance|trill|Musical_ly/i.test(ua);
-                const preventAutoPlay = isIOS && isInAppBrowser;
-                
-                if (!preventAutoPlay) {
-                    mediaEl.setAttribute('autoplay', '');
-                    // Gọi play() thủ công khi xuất hiện trên DOM
-                    setTimeout(() => mediaEl.play().catch(e => console.log('Autoplay prevented', e)), 100);
-                }
             } else {
-                // Nhận diện Zalo / In-App browser trên iOS (thêm TikTok, Bytedance)
-                const ua = navigator.userAgent;
-                const isIOS = /iPad|iPhone|iPod/.test(ua);
-                const isInAppBrowser = /Zalo|FBAN|FBAV|Instagram|Line|TikTok|Bytedance|trill|Musical_ly/i.test(ua);
-                const preventAutoPlay = isIOS && isInAppBrowser;
-                
-                const autoplayAttr = preventAutoPlay ? '' : 'autoplay';
-                const preloadAttr = preventAutoPlay ? 'auto' : 'none';
-
                 const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = `<video src="${src}" class="polaroid-media" ${autoplayAttr} loop muted playsinline webkit-playsinline preload="${preloadAttr}"></video>`;
+                tempDiv.innerHTML = `<video src="${src}" class="polaroid-media" loop muted playsinline webkit-playsinline preload="auto"></video>`;
                 mediaEl = tempDiv.firstElementChild;
-                
-                mediaEl.muted = true;
-                mediaEl.defaultMuted = true;
-                mediaEl.playsInline = true;
-                mediaEl.setAttribute('playsinline', '');
-                mediaEl.setAttribute('webkit-playsinline', '');
-                
-                if (!preventAutoPlay) {
-                    setTimeout(() => mediaEl.play().catch(e => console.log('Autoplay prevented', e)), 100);
-                }
             }
+            
+            // Thiết lập các thuộc tính ép phát video ngay trong thẻ (Inline)
+            mediaEl.muted = true;
+            mediaEl.defaultMuted = true;
+            mediaEl.playsInline = true;
+            mediaEl.setAttribute('playsinline', '');
+            mediaEl.setAttribute('webkit-playsinline', '');
+            
+            // Giao quyền Autoplay cho trình duyệt xử lý tự nhiên khi element được thêm vào DOM
+            mediaEl.autoplay = true;
+            mediaEl.setAttribute('autoplay', 'autoplay');
+            
+            // TUYỆT ĐỐI KHÔNG DÙNG lệnh mediaEl.play() ở đây!
+            // Trên TikTok / Android Webview, việc dùng JS ép play() mà không thông qua thao tác click trực tiếp của người dùng sẽ kích hoạt trình phát Fullscreen mặc định của máy.
         } else {
             mediaEl = document.createElement('img');
             mediaEl.src = src === 'placeholder' ? `https://picsum.photos/300/300?random=${Math.random()}` : src;
