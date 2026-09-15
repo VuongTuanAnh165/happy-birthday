@@ -686,6 +686,7 @@ body.focus-mode #polaroid-container .polaroid:not(:hover):not(.active) {
     user-select: none;
     transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 1s ease, filter 0.5s ease;
     will-change: transform;
+    contain: layout style paint; /* Tối ưu repaint — giới hạn ảnh hưởng render trong thẻ */
 }
 
 /* Tape effect (Washi Tape Blend) */
@@ -714,6 +715,13 @@ body.focus-mode #polaroid-container .polaroid:not(:hover):not(.active) {
     box-shadow: inset 0 0 10px rgba(0,0,0,0.4);
     /* Vintage Filter */
     filter: sepia(0.2) contrast(1.1) saturate(1.1);
+}
+
+/* Video Anti-Fullscreen: Ép video render inline trên mọi in-app browser */
+video.polaroid-media {
+    max-width: 100%;
+    max-height: 100%;
+    pointer-events: none; /* Ngăn trình duyệt mobile hijack tap trên video → play fullscreen */
 }
 
 .polaroid .glare {

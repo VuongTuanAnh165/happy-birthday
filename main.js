@@ -1,4 +1,76 @@
+// ==========================================
+// PLATFORM DETECTION HELPERS
+// ==========================================
+const UA = navigator.userAgent;
+
+function isMobileDevice() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(UA)
+        || ('ontouchstart' in window && navigator.maxTouchPoints > 0);
+}
+
+/**
+ * In-app browser AN TOÀN: Đã test hoạt động tốt với autoplay inline (Messenger, Facebook)
+ */
+function isSafeInAppBrowser() {
+    return /FBAN|FBAV|FB_IAB/i.test(UA);
+}
+
+/**
+ * In-app browser KHÔNG AN TOÀN: Sẽ hijack video ra fullscreen nếu dùng autoplay / .play()
+ * TikTok, Zalo, Instagram, Snapchat, Line, WeChat, Twitter, Threads...
+ */
+function isUnsafeInAppBrowser() {
+    if (!isMobileDevice()) return false; // PC luôn an toàn
+    if (isSafeInAppBrowser()) return false; // Messenger đã OK
+
+    // Kiểm tra các in-app browser nguy hiểm cụ thể
+    const unsafePatterns = /musical_ly|TikTok|BytedanceWebview|Zalo|Instagram|Snapchat|Line\//i;
+    if (unsafePatterns.test(UA)) return true;
+
+    // Nếu là mobile mà KHÔNG phải trình duyệt chính thống → coi là không an toàn
+    const isMainstreamBrowser = /Chrome\/|Safari\/|Firefox\/|SamsungBrowser\/|EdgA\//i.test(UA)
+        && !/wv\)/.test(UA); // Loại trừ WebView (wv) ẩn trong Chrome UA
+    
+    return !isMainstreamBrowser;
+}
+
+/**
+ * Tạo thẻ video an toàn bằng createElement thuần túy.
+ * Đảm bảo đầy đủ attributes chống fullscreen cho MỌI in-app browser.
+ */
+function createSafeVideoElement(src, options = {}) {
+    const video = document.createElement('video');
+    
+    video.src = src;
+    video.className = 'polaroid-media';
+    video.loop = true;
+    video.preload = 'auto';
+    
+    // === CHỐNG FULLSCREEN: Set cả attribute LẪN property ===
+    video.muted = true;
+    video.defaultMuted = true;
+    video.playsInline = true;
+    
+    // Attributes HTML — một số in-app browser chỉ đọc attribute, không đọc property
+    video.setAttribute('muted', '');
+    video.setAttribute('playsinline', '');
+    video.setAttribute('webkit-playsinline', '');
+    video.setAttribute('x-webkit-airplay', 'deny');
+    video.setAttribute('disablePictureInPicture', '');
+    video.setAttribute('disableRemotePlayback', '');
+    
+    // Autoplay: CHỈ set khi platform cho phép
+    if (options.autoplay) {
+        video.autoplay = true;
+        video.setAttribute('autoplay', '');
+    }
+    
+    return video;
+}
+
+// ==========================================
 // Data & Config
+// ==========================================
 const LOCAL_ASSETS = [
     'assets/images/1.webp',
     'assets/images/2.webp',
@@ -51,7 +123,9 @@ const POLAROID_CAPTIONS = [
     "😘", "🧸", "🎀", "💕"
 ];
 
+// ==========================================
 // DOM Elements
+// ==========================================
 const scene1 = document.getElementById('scene-1');
 const scene2 = document.getElementById('scene-2');
 const btnOpenGift = document.getElementById('btn-open-gift');
@@ -71,13 +145,24 @@ const polaroidContainer = document.getElementById('polaroid-container');
 const ctx = canvas.getContext('2d');
 let canvasWidth, canvasHeight;
 
+// ==========================================
+// DEBOUNCED RESIZE
+// ==========================================
+let resizeTimer = null;
+
 function resizeCanvas() {
     canvasWidth = window.innerWidth;
     canvasHeight = window.innerHeight;
     canvas.width = canvasWidth;
     canvas.height = canvasHeight;
 }
-window.addEventListener('resize', resizeCanvas);
+
+function debouncedResize() {
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(resizeCanvas, 150);
+}
+
+window.addEventListener('resize', debouncedResize, { passive: true });
 resizeCanvas();
 
 // ==========================================
@@ -143,17 +228,8 @@ function preloadVideosSequentially(videos, index) {
     
     const src = videos[index];
     
-    // Khi tải ngầm, tuyệt đối không dùng autoplay để tránh video tự chạy ẩn
-    // Tạo thẻ video trong bộ nhớ ngầm để ép trình duyệt load trước khung hình
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = `<video src="${src}" class="polaroid-media" loop muted playsinline webkit-playsinline preload="auto"></video>`;
-    const mediaEl = tempDiv.firstElementChild;
-    
-    mediaEl.muted = true;
-    mediaEl.defaultMuted = true;
-    mediaEl.playsInline = true;
-    mediaEl.setAttribute('playsinline', '');
-    mediaEl.setAttribute('webkit-playsinline', '');
+    // Tạo thẻ video preload bằng createElement an toàn (không autoplay)
+    const mediaEl = createSafeVideoElement(src, { autoplay: false });
     
     preloadedVideos[src] = mediaEl;
     mediaEl.load(); // Kích hoạt quá trình tải
@@ -171,6 +247,19 @@ function preloadVideosSequentially(videos, index) {
     
     // Fallback nếu mạng chậm (chỉ đợi tối đa 1.5s cho mỗi video để tránh kẹt)
     setTimeout(next, 1500);
+}
+
+/**
+ * Dọn dẹp video preload chưa được sử dụng để giải phóng bộ nhớ
+ */
+function cleanupUnusedPreloadedVideos() {
+    for (const src in preloadedVideos) {
+        const vid = preloadedVideos[src];
+        vid.pause();
+        vid.removeAttribute('src');
+        vid.load(); // Reset để giải phóng buffer
+        delete preloadedVideos[src];
+    }
 }
 
 preloadAssets();
@@ -217,12 +306,12 @@ giftBox.addEventListener('mousemove', (e) => {
         const glareY = (y / rect.height) * 100;
         glare.style.backgroundPosition = `${glareX}% ${glareY}%`;
     }
-});
+}, { passive: true });
 
 giftBox.addEventListener('mouseleave', () => {
     giftBox.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)`;
     if (glare) glare.style.backgroundPosition = `-100% -100%`;
-});
+}, { passive: true });
 
 // V5: Interactive Spotlight ở Scene 1
 document.addEventListener('mousemove', (e) => {
@@ -234,7 +323,7 @@ document.addEventListener('mousemove', (e) => {
             spotlight.style.transform = `translateX(-50%) skewX(-20deg) translateX(${x}px)`;
         }
     }
-});
+}, { passive: true });
 
 // ==========================================
 // PHASE 1: Mở quà Cinematic (Nâng cấp v4)
@@ -283,7 +372,7 @@ function openGift() {
     setTimeout(() => {
         createFireflies();
         createSprinkles();
-        document.addEventListener('mousemove', handleMeshGradientMove);
+        document.addEventListener('mousemove', handleMeshGradientMove, { passive: true });
         cleanupScene1();
         
         // Bắt đầu gõ lời chúc
@@ -700,6 +789,9 @@ function generatePolaroids(startX, startY) {
         itemsToShow = [...preparedBatch];
         preparedBatch = []; // Xóa sau khi dùng
         
+        // Dọn dẹp video preload không dùng đến
+        cleanupUnusedPreloadedVideos();
+        
         // KÍCH HOẠT TẢI NGẦM MẺ TIẾP THEO ngay trong lúc người dùng đang xem mẻ này
         setTimeout(() => {
             prepareNextBatch(maxItems);
@@ -710,6 +802,13 @@ function generatePolaroids(startX, startY) {
         for(let i=0; i<maxItems; i++) itemsToShow.push('placeholder');
     }
 
+    // Xác định strategy autoplay theo platform (một lần duy nhất)
+    const mobile = isMobileDevice();
+    const unsafeApp = isUnsafeInAppBrowser();
+    // PC hoặc Messenger: cho phép autoplay
+    // TikTok/Zalo/Instagram: KHÔNG autoplay
+    const allowAutoplay = !unsafeApp;
+
     itemsToShow.forEach((src, index) => {
         const polaroid = document.createElement('div');
         polaroid.className = 'polaroid';
@@ -718,28 +817,17 @@ function generatePolaroids(startX, startY) {
         const isVideo = src !== 'placeholder' && (src.endsWith('.mp4') || src.endsWith('.webm') || src.endsWith('.mov'));
         
         if (isVideo) {
-            // LUÔN TẠO THẺ MỚI với autoplay trực tiếp trong HTML.
-            // Giải phóng bộ nhớ của thẻ tải ngầm (nếu có) vì trình duyệt PC/Chrome không nhận diện autoplay trên thẻ cũ (tái sử dụng).
-            // Data video đã nằm sẵn trong cache nhờ preloadVideosSequentially nên thẻ mới này sẽ load tức thì, không bị đen.
+            // Giải phóng bộ nhớ của thẻ tải ngầm (nếu có)
+            // Data video đã nằm sẵn trong cache nhờ preloadVideosSequentially
             if (preloadedVideos[src]) {
-                preloadedVideos[src].src = '';
+                preloadedVideos[src].pause();
+                preloadedVideos[src].removeAttribute('src');
+                preloadedVideos[src].load();
                 delete preloadedVideos[src]; 
             }
             
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = `<video src="${src}" class="polaroid-media" autoplay loop muted playsinline webkit-playsinline></video>`;
-            mediaEl = tempDiv.firstElementChild;
-            
-            // Đảm bảo set cứng property bằng JS (Cực kỳ quan trọng để iOS Webview không bỏ sót)
-            mediaEl.muted = true;
-            mediaEl.defaultMuted = true;
-            mediaEl.playsInline = true;
-            mediaEl.autoplay = true;
-            mediaEl.setAttribute('playsinline', '');
-            mediaEl.setAttribute('webkit-playsinline', '');
-            
-            // TUYỆT ĐỐI KHÔNG DÙNG lệnh mediaEl.play() ở đây!
-            // Trên TikTok / Android Webview, việc dùng JS ép play() mà không thông qua thao tác click trực tiếp của người dùng sẽ kích hoạt trình phát Fullscreen mặc định của máy.
+            // Tạo video element mới bằng helper an toàn
+            mediaEl = createSafeVideoElement(src, { autoplay: allowAutoplay });
         } else {
             mediaEl = document.createElement('img');
             mediaEl.src = src === 'placeholder' ? `https://picsum.photos/300/300?random=${Math.random()}` : src;
@@ -777,18 +865,21 @@ function generatePolaroids(startX, startY) {
             polaroidContainer.appendChild(polaroid);
             polaroid.style.pointerEvents = 'none';
             
-            // SỬA LỖI PC: Trình duyệt Chrome/PC từ chối Autoplay tự nhiên khi thẻ video được insert trễ (qua setTimeout).
-            // Do đó, BẮT BUỘC phải gọi lệnh .play() bằng Javascript ngay sau khi gắn vào DOM.
+            // Autoplay logic sau khi gắn vào DOM
             const vid = polaroid.querySelector('video');
             if (vid) {
-                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                
-                // CHỈ ÉP PLAY TRÊN PC: Trình duyệt PC hay bị lỗi không tự nhận diện Autoplay.
-                // Tuyệt đối không dùng JS ép play() trên Mobile/TikTok vì sẽ bị cướp quyền Fullscreen.
-                if (!isMobile) {
+                if (!mobile) {
+                    // PC: BẮT BUỘC gọi .play() vì Chrome PC từ chối autoplay khi insert trễ qua setTimeout
                     setTimeout(() => {
                         vid.play().catch(e => console.log('PC Autoplay prevented', e));
                     }, 50);
+                } else if (allowAutoplay) {
+                    // Mobile an toàn (Messenger): Autoplay attribute đã được set, KHÔNG gọi .play()
+                    // Trình duyệt sẽ tự play nhờ attribute autoplay
+                } else {
+                    // Mobile KHÔNG an toàn (TikTok/Zalo/Instagram):
+                    // KHÔNG autoplay, KHÔNG gọi .play(). Video sẽ hiển thị frame đầu.
+                    // User tap vào thẻ → play inline (xử lý trong setupPolaroidInteraction)
                 }
             }
             
@@ -807,6 +898,12 @@ function generatePolaroids(startX, startY) {
 }
 
 function animateZeroGravity() {
+    // Dừng loop nếu không còn polaroid nào
+    if (activePolaroids.length === 0) {
+        animationFrameId = null;
+        return;
+    }
+
     activePolaroids.forEach(obj => {
         if (obj.isHovered) return; // Nếu đang hover thì dừng trôi
         if (!obj.el.parentNode) return; // v4: Skip nếu chưa append vào DOM (stagger)
@@ -843,6 +940,8 @@ function animateZeroGravity() {
 // ==========================================
 function setupPolaroidInteraction(obj) {
     const videoEl = obj.el.querySelector('video');
+    const mobile = isMobileDevice();
+    const unsafeApp = isUnsafeInAppBrowser();
 
     const handleHover = () => {
         // Tối ưu Touch: Khi click/hover vào một ảnh, tự động unhover các ảnh khác
@@ -871,29 +970,29 @@ function setupPolaroidInteraction(obj) {
         } else {
             // DESKTOP: Zoom tại chỗ + tilt 3D
             obj.el.style.transform = `translate3d(${obj.x}px, ${obj.y}px, 0) scale(2.8) rotate(0deg)`;
-            obj.el.addEventListener('mousemove', obj.tiltHandler);
+            obj.el.addEventListener('mousemove', obj.tiltHandler, { passive: true });
         }
         
         if (videoEl) {
-            const ua = navigator.userAgent;
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-            const isMessenger = /FBAN|FBAV/i.test(ua); 
-            
-            // CHỐT CHẶN CUỐI CÙNG CHO TIKTOK: Chỉ an toàn bật tiếng nếu là PC hoặc Messenger.
-            // Mọi trình duyệt di động khác đều bị ép Câm (Muted) để không tạo cớ cho TikTok bung Fullscreen.
-            const isSafeToUnmute = !isMobile || isMessenger;
+            // Xác định có an toàn để bật tiếng + play hay không
+            const isSafeToUnmute = !mobile || isSafeInAppBrowser();
             
             if (isSafeToUnmute) {
+                // PC hoặc Messenger: Bật tiếng, tắt nhạc nền
                 videoEl.muted = false;
-                bgMusic.pause(); 
-            }
-            
-            // TUYỆT ĐỐI KHÔNG DÙNG JS ĐỂ GỌI PLAY() TRÊN ĐIỆN THOẠI!
-            // Nhờ ta đã gỡ pointer-events:none ở CSS, cú tap của bạn sẽ chạm trực tiếp vào thẻ video.
-            // Trình duyệt điện thoại sẽ "thuận nước đẩy thuyền" tự play video tại chỗ mà không bung Fullscreen.
-            if (!isMobile) {
-                if (videoEl.paused) {
+                bgMusic.pause();
+                
+                // PC: Ép play nếu đang pause
+                if (!mobile && videoEl.paused) {
                     videoEl.play().catch(e => console.log('Video play prevented', e));
+                }
+            } else if (unsafeApp) {
+                // TikTok/Zalo/Instagram: Tap của user = user gesture hợp lệ
+                // → An toàn để play inline VÀ bật tiếng vì đây là thao tác trực tiếp
+                videoEl.muted = false;
+                bgMusic.pause();
+                if (videoEl.paused) {
+                    videoEl.play().catch(e => console.log('InApp video play prevented', e));
                 }
             }
         }
@@ -917,6 +1016,11 @@ function setupPolaroidInteraction(obj) {
         if (videoEl) {
             videoEl.muted = true;
             bgMusic.play().catch(e => console.log("Audio play prevented", e));
+            
+            // Trên unsafe in-app browser: pause video khi unhover (vì không có autoplay)
+            if (unsafeApp) {
+                videoEl.pause();
+            }
         }
     };
 
@@ -957,8 +1061,8 @@ function setupPolaroidInteraction(obj) {
         });
     } else {
         // DESKTOP: Mouse hover
-        obj.el.addEventListener('mouseenter', handleHover);
-        obj.el.addEventListener('mouseleave', handleUnhover);
+        obj.el.addEventListener('mouseenter', handleHover, { passive: true });
+        obj.el.addEventListener('mouseleave', handleUnhover, { passive: true });
     }
 }
 
@@ -1018,6 +1122,14 @@ btnMoreMagic.addEventListener('click', () => {
     activePolaroids = []; // Dừng vòng lặp requestAnimationFrame cho các ảnh cũ
 
     oldPolaroids.forEach(obj => {
+        // Dọn dẹp video trước khi remove element
+        const vid = obj.el.querySelector('video');
+        if (vid) {
+            vid.pause();
+            vid.removeAttribute('src');
+            vid.load(); // Giải phóng buffer
+        }
+        
         // v4: Sparkle dissolve tại vị trí ảnh cũ
         const rect = obj.el.getBoundingClientRect();
         createSparklesAtPosition(rect.left + rect.width/2, rect.top + rect.height/2);
@@ -1049,6 +1161,13 @@ document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
         // Tab ẩn → dừng mọi thứ để tiết kiệm pin
         bgMusic.pause();
+        
+        // Pause tất cả video đang chạy
+        activePolaroids.forEach(obj => {
+            const vid = obj.el.querySelector('video');
+            if (vid && !vid.paused) vid.pause();
+        });
+        
         if (fireworksTimeoutId) {
             clearTimeout(fireworksTimeoutId);
             fireworksTimeoutId = null;
@@ -1061,6 +1180,18 @@ document.addEventListener('visibilitychange', () => {
         // Tab hiện lại → resume
         if (scene2.classList.contains('active')) {
             bgMusic.play().catch(() => {});
+            
+            // Resume video autoplay (chỉ trên platform an toàn)
+            if (!isUnsafeInAppBrowser()) {
+                activePolaroids.forEach(obj => {
+                    const vid = obj.el.querySelector('video');
+                    if (vid && vid.paused && !obj.isHovered) {
+                        vid.muted = true; // Đảm bảo muted khi resume
+                        vid.play().catch(() => {});
+                    }
+                });
+            }
+            
             // Resume polaroid animation nếu đang ở phase đó
             if (activePolaroids.length > 0 && !animationFrameId) {
                 animateZeroGravity();
