@@ -781,15 +781,11 @@ function generatePolaroids(startX, startY) {
             // Do đó, BẮT BUỘC phải gọi lệnh .play() bằng Javascript ngay sau khi gắn vào DOM.
             const vid = polaroid.querySelector('video');
             if (vid) {
-                const ua = navigator.userAgent;
-                const isIOS = /iPhone|iPad|iPod/i.test(ua);
-                const isSafari = /Safari/i.test(ua);
-                const isFB = /FBAN|FBAV/i.test(ua); 
-                const isHiddenIOSWebView = isIOS && !isSafari && !isFB;
-                const isStrictWebView = /TikTok|Bytedance|trill|Musical_ly|ByteLocale|aweme|Zalo/i.test(ua);
-                const isDangerousAutoplay = isHiddenIOSWebView || isStrictWebView;
-
-                if (!isDangerousAutoplay) {
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                
+                // CHỈ ÉP PLAY TRÊN PC: Trình duyệt PC hay bị lỗi không tự nhận diện Autoplay.
+                // Tuyệt đối không dùng JS ép play() trên Mobile/TikTok vì sẽ bị cướp quyền Fullscreen.
+                if (!isMobile) {
                     setTimeout(() => {
                         vid.play().catch(e => console.log('PC Autoplay prevented', e));
                     }, 50);
@@ -880,24 +876,25 @@ function setupPolaroidInteraction(obj) {
         
         if (videoEl) {
             const ua = navigator.userAgent;
-            const isIOS = /iPhone|iPad|iPod/i.test(ua);
-            const isSafari = /Safari/i.test(ua);
-            const isFB = /FBAN|FBAV/i.test(ua); 
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+            const isMessenger = /FBAN|FBAV/i.test(ua); 
             
-            // TikTok trên iOS thường giấu tên, chỉ để lộ danh tính là một WebView ẩn danh (Không có chữ Safari).
-            const isHiddenIOSWebView = isIOS && !isSafari && !isFB;
-            const isStrictWebView = /TikTok|Bytedance|trill|Musical_ly|ByteLocale|aweme|Zalo/i.test(ua);
+            // CHỐT CHẶN CUỐI CÙNG CHO TIKTOK: Chỉ an toàn bật tiếng nếu là PC hoặc Messenger.
+            // Mọi trình duyệt di động khác đều bị ép Câm (Muted) để không tạo cớ cho TikTok bung Fullscreen.
+            const isSafeToUnmute = !isMobile || isMessenger;
             
-            // Chốt chặn TỐI THƯỢNG: Nếu là TikTok/Zalo hoặc WebView ẩn danh trên iOS thì TUYỆT ĐỐI không bật tiếng.
-            const shouldMuteForcefully = isHiddenIOSWebView || isStrictWebView;
-            
-            if (!shouldMuteForcefully) {
+            if (isSafeToUnmute) {
                 videoEl.muted = false;
                 bgMusic.pause(); 
             }
             
-            if (videoEl.paused) {
-                videoEl.play().catch(e => console.log('Video play prevented', e));
+            // TUYỆT ĐỐI KHÔNG DÙNG JS ĐỂ GỌI PLAY() TRÊN ĐIỆN THOẠI!
+            // Nhờ ta đã gỡ pointer-events:none ở CSS, cú tap của bạn sẽ chạm trực tiếp vào thẻ video.
+            // Trình duyệt điện thoại sẽ "thuận nước đẩy thuyền" tự play video tại chỗ mà không bung Fullscreen.
+            if (!isMobile) {
+                if (videoEl.paused) {
+                    videoEl.play().catch(e => console.log('Video play prevented', e));
+                }
             }
         }
     };
