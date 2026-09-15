@@ -991,14 +991,11 @@ function generatePolaroids(startX, startY) {
                     }
                 });
                 
-                // PC: BẮT BUỘC gọi .play() vì Chrome PC từ chối autoplay khi insert trễ qua setTimeout
-                if (!mobile) {
-                    setTimeout(() => {
-                        vid.play().catch(e => console.log('PC Autoplay prevented', e));
-                    }, 50);
-                }
-                // Mobile: ĐỂ AUTOPLAY ATTRIBUTE xử lý. KHÔNG gọi .play().
-                // Nếu autoplay bị chặn, video sẽ hiển thị frame đầu nhờ preload="auto".
+                // Ép play video sau khi gắn vào DOM (để fix lỗi Safari/Chrome mobile bỏ qua autoplay)
+                // Các trình duyệt độc quyền (TikTok) bắt cóc sự kiện này đã bị chặn ở đầu file.
+                setTimeout(() => {
+                    vid.play().catch(e => console.log('Autoplay prevented', e));
+                }, 50);
             }
             
             // Bật tương tác sau khi bung ra 1 khoảng
