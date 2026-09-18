@@ -886,7 +886,7 @@ function generatePolaroids(startX, startY) {
     } else if (windowWidth <= 768) {
         maxItems = 16; // Tablet hiển thị 16
     } else {
-        maxItems = Math.min(LOCAL_ASSETS.length, 24); // Desktop tối đa 24
+        maxItems = LOCAL_ASSETS.length > 0 ? Math.min(LOCAL_ASSETS.length, 24) : 24; // Desktop tối đa 24
     }
 
     let itemsToShow = [];
